@@ -18,7 +18,7 @@ The project does not aim to create infrastructure to manage jars with remote cac
 - Run `lbpserver-*.*.*-SNAPSHOT\bin\install.cmd`
   >It creates `lbpserver-*.*.*-SNAPSHOT\workspase` which contains bloop server. 
 - Run `lbpserver-*.*.*-SNAPSHOT\bin\addservice.cmd`
-  >It add an windows service which name is BloopService
+  >It adds an windows service which name is BloopService
   
 ### Preparing to use bloop client 
 - Start BloopService
