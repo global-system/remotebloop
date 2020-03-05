@@ -9,5 +9,20 @@ A set of tools to make easier adding remote compilation to the bloop server
 
 The project does not aim to create infrastructure to manage jars with remote cache
 
+## How to use 
+
+### Installation
+- Download or clone project 
+- Run sbt universal:packageBin 
+- Unpack `lbpserver\target\universal\lbpserver-*.*.*-SNAPSHOT.zip` to some folder
+- Run `lbpserver-*.*.*-SNAPSHOT\bin\install.cmd`
+  >It creates `lbpserver-*.*.*-SNAPSHOT\workspase` which contains bloop server. 
+- Run `lbpserver-*.*.*-SNAPSHOT\bin\addservice.cmd`
+  >It add an windows service which name is BloopService
+  
+### Preparing to use bloop client 
+- Start BloopService
+- Add `lbpserver-*.*.*-SNAPSHOT\workspace\.bloop` to the path variable
+
 
 
