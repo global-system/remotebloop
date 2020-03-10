@@ -8,13 +8,13 @@ lazy val global = project
   .in(file("."))
   .settings(settings)
   .aggregate(
-    lbpserver,
-    lbpcommander
+    rbpserver,
+    rbpcommander
   )
 
-lazy val lbpserver = project
+lazy val rbpserver = project
   .settings(
-    name := "lbpserver",
+    name := "rbpserver",
     settings,
     libraryDependencies ++= commonDependencies,
     libraryDependencies ++= Seq(
@@ -34,13 +34,13 @@ lazy val lbpserver = project
       val files = (externalDependencyClasspath in Runtime).value
       files.map{f => f.data -> ("lib\\"+f.data.name)}
     },
-    mappings in Universal ++= directory("lbpserver\\bin"),
-    mappings in Universal ++= directory("lbpserver\\config")
+    mappings in Universal ++= directory("rbpserver\\bin"),
+    mappings in Universal ++= directory("rbpserver\\config")
   ).enablePlugins(UniversalPlugin)
 
-lazy val lbpcommander = project
+lazy val rbpcommander = project
   .settings(
-    name := "lbpcommander",
+    name := "rbpcommander",
     settings,
     libraryDependencies ++= commonDependencies
   )
