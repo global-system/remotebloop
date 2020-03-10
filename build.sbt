@@ -42,7 +42,8 @@ lazy val rbpcommander = project
   .settings(
     name := "rbpcommander",
     settings,
-    libraryDependencies ++= commonDependencies
+    libraryDependencies ++= commonDependencies,
+    libraryDependencies ++= Seq("org.scala-sbt" %% "zinc" % "1.3.0-M4")
   )
 lazy val commonDependencies = Seq(
   "org.apache.commons" % "commons-text" % "1.8",

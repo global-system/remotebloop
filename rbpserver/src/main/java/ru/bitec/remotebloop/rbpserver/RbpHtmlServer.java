@@ -39,7 +39,6 @@ public class RbpHtmlServer {
                 .parse(argArray);
         if (args.help) return;
         if (args.stop){
-            serverWork.cancel(false);
             stop();
         }else{
             start(args);

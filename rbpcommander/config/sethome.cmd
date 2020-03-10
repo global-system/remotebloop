@@ -1,0 +1,1 @@
+set RBPSERVER_HOME=C:\vcs\git\globalsystem\remotebloop\rbpserver
