@@ -1,6 +1,9 @@
 # RemoteBloop
 A set of tools to make easier adding remote compilation to the bloop server
+## Attention 
+The project is in experimental stage. 
 
+See also: https://github.com/scalacenter/bloop/issues/1091
 ## Project goals
 - run bloop as a service in windows 
 - start\stop a bloop server by http api
