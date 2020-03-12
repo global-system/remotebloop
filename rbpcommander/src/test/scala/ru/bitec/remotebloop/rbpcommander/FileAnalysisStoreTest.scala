@@ -8,8 +8,8 @@ import xsbti.compile.{AnalysisContents, AnalysisStore, MiniSetup}
 import xsbti.compile.analysis.{ReadMapper, ReadWriteMappers, Stamp, WriteMapper}
 
 object FileAnalysisStoreTest {
-  val toFile = Paths.get("rbpcommander\\workspace\\inc_compile_2.12exp.zip").toAbsolutePath.toFile
-  val fromFile = Paths.get("rbpcommander\\workspace\\inc_compile_2.12.zip").toAbsolutePath.toFile
+  val toFile = Paths.get("workspace\\inc_compile_2.12exp.zip").toAbsolutePath.toFile
+  val fromFile = Paths.get("rbpcommander\\target\\streams\\compile\\bloopAnalysisOut\\_global\\streams\\inc_compile_2.12.zip").toAbsolutePath.toFile
 
   def getMachineIndependentStore(): AnalysisStore = {
     val readMapper = new TraceReadMapper()
