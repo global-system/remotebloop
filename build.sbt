@@ -6,11 +6,25 @@ version := "0.1.0"
 
 lazy val global = project
   .in(file("."))
-  .settings(settings)
-  .aggregate(
+  .settings(settings,
+    mappings in Universal ++= directory("bin"),
+    mappings in Universal ++= directory("config"),
+    mappings in Universal += {
+      val jar = (packageBin in Compile in rbpserver).value
+      jar -> ("lib\\rbpserver\\" + jar.getName)
+    },
+    mappings in Universal ++= {
+      val files = (externalDependencyClasspath in Runtime in rbpserver).value
+      files.map{f => f.data -> ("lib\\rbpserver\\"+f.data.name)}
+    },
+    mappings in Universal ++= {
+      val files = (externalDependencyClasspath in Runtime in rbplauncher).value
+      files.map{f => f.data -> ("lib\\rbplauncher\\"+f.data.name)}
+    }
+  ).aggregate(
     rbpserver,
     rbpcommander
-  )
+  ).enablePlugins(UniversalPlugin)
 
 lazy val rbpserver = project
   .settings(
@@ -25,25 +39,27 @@ lazy val rbpserver = project
       //"com.sun.jersey" % "jersey-core" % "2.30.1",
       //"com.sun.jersey" % "jersey-server" % "2.30.1",
       //"jakarta.ws.rs" % "jakarta.ws.rs-api" % "2.1.6"
-    ),
-   mappings in Universal += {
-     val jar = (packageBin in Compile).value
-     jar -> ("lib/" + jar.getName)
-   },
-    mappings in Universal ++= {
-      val files = (externalDependencyClasspath in Runtime).value
-      files.map{f => f.data -> ("lib\\"+f.data.name)}
-    },
-    mappings in Universal ++= directory("rbpserver\\bin"),
-    mappings in Universal ++= directory("rbpserver\\config")
-  ).enablePlugins(UniversalPlugin)
+    )
+  )
 
 lazy val rbpcommander = project
   .settings(
     name := "rbpcommander",
     settings,
     libraryDependencies ++= commonDependencies,
-    libraryDependencies ++= Seq("org.scala-sbt" %% "zinc" % "1.3.0-M4")
+    libraryDependencies ++= Seq(
+      "org.scala-sbt" %% "zinc" % "1.3.0-M4",
+      "ch.epfl.scala" % "bsp4j" % "2.0.0-M6",
+      "ch.epfl.scala" %% "bloop-launcher" % "1.4.0-RC1"
+    )
+  )
+lazy val rbplauncher = project
+  .settings(
+    name := "rbplauncher",
+    settings,
+    libraryDependencies ++= Seq(
+      "ch.epfl.scala" %% "bloop-launcher" % "1.4.0-RC1"
+    )
   )
 lazy val commonDependencies = Seq(
   "org.apache.commons" % "commons-text" % "1.8",

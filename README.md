@@ -17,15 +17,15 @@ The project does not aim to create infrastructure to manage jars with remote cac
 ### Installation
 - Download or clone project 
 - Run sbt universal:packageBin 
-- Unpack `rbpserver\target\universal\rbpserver-*.*.*-SNAPSHOT.zip` to some folder
-- Run `rbpserver-*.*.*-SNAPSHOT\bin\install.cmd`
-  >It creates `rbpserver-*.*.*-SNAPSHOT\workspase` which contains bloop server. 
-- Run `rbpserver-*.*.*-SNAPSHOT\bin\addservice.cmd`
+- Unpack `target\universal\remotebloop-*.*.*-SNAPSHOT.zip` to some folder
+- Run `remotebloop-*.*.*-SNAPSHOT\bin\install.cmd`
+  >It creates `remotebloop-*.*.*-SNAPSHOT\workspase` which contains bloop server. 
+- Run `remotebloop-*.*.*-SNAPSHOT\bin\addservice.cmd`
   >It adds an windows service which name is BloopService
   
 ### Preparing to use bloop client 
 - Start BloopService
-- Add `rbpserver-*.*.*-SNAPSHOT\workspace\.bloop` to the path variable
+- Add `remotebloop-*.*.*-SNAPSHOT\workspace\.bloop` to the path variable
 
 
 

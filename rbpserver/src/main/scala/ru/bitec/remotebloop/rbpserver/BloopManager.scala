@@ -7,9 +7,9 @@ class BloopManager(processBuilder:ProcessBuilder,log: String => Unit){
   def start():Unit = {
     process = processBuilder.start()
     val inStream = process.getInputStream
-    val reader = new InputStreamReader(inStream)
-    val bufReader = new BufferedReader(reader)
     val thread = new Thread({()=>
+      val reader = new InputStreamReader(inStream)
+      val bufReader = new BufferedReader(reader)
       try{
         val startMsg = "the bloop process is started"
         println(startMsg)

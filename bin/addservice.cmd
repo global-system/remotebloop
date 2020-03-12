@@ -5,7 +5,7 @@ cd %scrpath%..
 set root_path=%CD%
 cd /d  %scrpath%
 
-For /R ..\lib %%i IN (*.jar) do set classpath=!classpath!%%i;
+For /R ..\lib\rbpserver %%i IN (*.jar) do set classpath=!classpath!%%i;
 
 "%scrpath%\..\workspace\commons-daemon\prunsrv.exe" //IS//BloopService ^
   --DisplayName="BloopService" ^
