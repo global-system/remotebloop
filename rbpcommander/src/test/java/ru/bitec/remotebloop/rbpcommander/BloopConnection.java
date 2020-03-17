@@ -60,7 +60,7 @@ public class BloopConnection {
     }
 
     public synchronized void  open() throws IOException {
-        process = new ProcessBuilder("cmd","/Q","/c","bin\\bloopbsp.cmd").redirectErrorStream(true).start();
+        process = new ProcessBuilder("cmd","/Q","/c","experimental\\bin\\bloopbsp.cmd").redirectErrorStream(true).start();
         buildClient = new BuildClient_();
         executorService = Executors.newFixedThreadPool(1);
         Launcher<RichBuildServer> launcher = new Launcher.Builder<RichBuildServer>()

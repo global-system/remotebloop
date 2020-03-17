@@ -16,11 +16,11 @@ lazy val global = project
     mappings in Universal ++= {
       val files = (externalDependencyClasspath in Runtime in rbpserver).value
       files.map{f => f.data -> ("lib\\rbpserver\\"+f.data.name)}
-    },
+    }/*,
     mappings in Universal ++= {
       val files = (externalDependencyClasspath in Runtime in rbplauncher).value
       files.map{f => f.data -> ("lib\\rbplauncher\\"+f.data.name)}
-    }
+    }*/
   ).aggregate(
     rbpserver,
     rbpcommander
@@ -50,7 +50,8 @@ lazy val rbpcommander = project
     libraryDependencies ++= Seq(
       "org.scala-sbt" %% "zinc" % "1.3.0-M4",
       "ch.epfl.scala" % "bsp4j" % "2.0.0-M6",
-      "ch.epfl.scala" %% "bloop-config" % "1.4.0-RC1"
+      "ch.epfl.scala" %% "bloop-config" % "1.4.0-RC1",
+      "io.monix" %% "monix" % "3.1.0"
     )
   )
 lazy val rbplauncher = project
@@ -66,7 +67,8 @@ lazy val commonDependencies = Seq(
   "com.beust" % "jcommander" % "1.78",
   "org.apache.httpcomponents" % "httpclient" % "4.5.11",
   "commons-io" % "commons-io" % "2.6",
-  "org.scala-sbt" %% "io" % "1.3.3"
+  "org.scala-sbt" %% "io" % "1.3.3",
+  "org.scalatest" %% "scalatest" % "3.1.1" % "test"
 )
 
 lazy val settings = commonSettings  

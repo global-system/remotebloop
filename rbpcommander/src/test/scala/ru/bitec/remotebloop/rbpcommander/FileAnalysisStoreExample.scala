@@ -11,7 +11,7 @@ import sbt.ru.bitec.remotebloop.HashUtiles
 import xsbti.compile.{AnalysisContents, AnalysisStore, MiniSetup}
 import xsbti.compile.analysis.{ReadMapper, ReadWriteMappers, Stamp, WriteMapper}
 
-object FileAnalysisStoreTest {
+object FileAnalysisStoreExample {
   val toFile = Paths.get("workspace\\inc_compile_2.12exp.zip").toAbsolutePath.toFile
   val fromFile = Paths.get("rbpcommander\\target\\streams\\compile\\bloopAnalysisOut\\_global\\streams\\inc_compile_2.12.zip").toAbsolutePath.toFile
 
