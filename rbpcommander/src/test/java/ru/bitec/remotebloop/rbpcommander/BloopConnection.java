@@ -10,7 +10,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-
+import java.lang.ProcessBuilder;
 
 public class BloopConnection {
     public static interface RichBuildServer extends BuildServer, ScalaBuildServer, JvmBuildServer{
@@ -31,7 +31,7 @@ public class BloopConnection {
         }
         @Override
         public void onBuildLogMessage(LogMessageParams params) {
-            System.out.println("onBuildLogMessage:"+params.toString());
+            System.out.println("onBuildLogMessage1:"+params.toString());
         }
         @Override
         public void onBuildTaskStart(TaskStartParams params) {
@@ -60,7 +60,7 @@ public class BloopConnection {
     }
 
     public synchronized void  open() throws IOException {
-        process = ProcessBuilder$.MODULE$.bloopBsp().redirectErrorStream(true).start();
+        process = new ProcessBuilder("cmd","/Q","/c","bin\\bloopbsp.cmd").redirectErrorStream(true).start();
         buildClient = new BuildClient_();
         executorService = Executors.newFixedThreadPool(1);
         Launcher<RichBuildServer> launcher = new Launcher.Builder<RichBuildServer>()

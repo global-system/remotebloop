@@ -50,7 +50,7 @@ lazy val rbpcommander = project
     libraryDependencies ++= Seq(
       "org.scala-sbt" %% "zinc" % "1.3.0-M4",
       "ch.epfl.scala" % "bsp4j" % "2.0.0-M6",
-      "ch.epfl.scala" %% "bloop-launcher" % "1.4.0-RC1"
+      "ch.epfl.scala" %% "bloop-config" % "1.4.0-RC1"
     )
   )
 lazy val rbplauncher = project
@@ -65,7 +65,8 @@ lazy val commonDependencies = Seq(
   "org.apache.commons" % "commons-text" % "1.8",
   "com.beust" % "jcommander" % "1.78",
   "org.apache.httpcomponents" % "httpclient" % "4.5.11",
-  "commons-io" % "commons-io" % "2.6"
+  "commons-io" % "commons-io" % "2.6",
+  "org.scala-sbt" %% "io" % "1.3.3"
 )
 
 lazy val settings = commonSettings  

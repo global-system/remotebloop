@@ -5,7 +5,7 @@ import ch.epfl.scala.bsp4j.*;
 
 import java.util.Collections;
 
-public class BloopConnector {
+public class BloopConnectorExample {
     BloopConnection bc = new BloopConnection(
             java.nio.file.Paths.get("C:\\vcs\\git\\globalsystem\\remotebloop").toAbsolutePath().normalize()
     );
@@ -39,6 +39,6 @@ public class BloopConnector {
         bc.close();
     }
     public static void main(String[] args) throws Exception {
-         new BloopConnector().run();
+         new BloopConnectorExample().run();
     }
 }
