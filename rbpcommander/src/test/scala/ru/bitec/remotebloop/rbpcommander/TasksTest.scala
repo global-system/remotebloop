@@ -17,7 +17,7 @@ class TasksTest extends org.scalatest.FunSuite {
     val result = Await.result(f,10.seconds)
     val project = result.get.filter{p=> p.project.name.equals("rbpcommander")}.head
     val st = Tasks.safeLocalProject(project,Paths.get("workspace").toAbsolutePath)
-    val stResult = Await.result(st.runToFuture,10.seconds)
+    val stResult = Await.result(st.runToFuture,1.hours)
     stResult match {
       case Failure(e) =>
         e.printStackTrace()

@@ -15,36 +15,25 @@ import sbt.internal.inc.FileAnalysisStore
 import scala.util.{Failure, Success, Try}
 
 object Tasks {
+  import RichTryTask.Implicits._
   val paralelism: Int = Runtime.getRuntime.availableProcessors
 
   def loadLocalProjects(path: Path): Task[Try[List[LocalProject]]] = {
-    Task{Try{
+    TryTask{
       (sbt.io.PathFinder(path.toFile) * ("*.json")).get()
-    }}.flatMap{
-      case Success(files) =>
+    }.tryFlatMap{files =>
         Observable.fromIterable(files).mapParallelUnordered(paralelism) { file =>
           Task[Try[Config.File]] {
             import bloop.config.read
             val config = read(file.toPath)
             config.fold(Failure(_),Success(_))
           }
-        }.toListL.map[Try[List[LocalProject]]]{ configTryList =>
-          Try {
-            val fList = for (Failure(e) <- configTryList) yield e
-            if (fList.nonEmpty) {
-              val runtimeException = new RuntimeException("loadLocalProjects is faild")
-              fList.foreach { e =>
-                runtimeException.addSuppressed(e)
-              }
-              throw runtimeException
-            }
-            for (Success(p) <- configTryList) yield LocalProject(project = p.project)
-          }
+        }.toListL.groupByTry().tryMap{ list =>
+          list.map{i=> LocalProject(i.project)}
         }
-      case Failure(e) => Task.now(Failure(e))
     }
   }
-  def safeLocalProjectPrepare(localProject: LocalProject,pathTo: Path): Task[Try[LocalProject]] = Task{Try{
+  def safeLocalProjectPrepare(localProject: LocalProject,pathTo: Path): Task[Try[LocalProject]] = TryTask{
     val analysis = (for (s <- localProject.project.scala; a <- s.analysis) yield {
       val file = a.toFile
       if (file.exists()) {
@@ -53,7 +42,11 @@ object Tasks {
         None
       }
     }).flatten
-    val fileTo = pathTo.resolve(localProject.project.name+".zip").toFile;
+    val fileTo = pathTo.resolve(localProject.project.name+".zip").toFile
+    for(
+      fos<- Using( new FileOutputStream(fileTo));
+      _ <- Using(new ZipOutputStream(fos))){
+    }
     analysis match {
       case Some(file) =>
           val remoteStore = FileAnalysisStore.binary(file)
@@ -67,47 +60,28 @@ object Tasks {
       case None =>
         localProject.copy(remoteCacheOpt = Some(fileTo.toPath.toAbsolutePath))
     }
-  }}
+  }
   def safeLocalProject(localProject: LocalProject,pathTo: Path): Task[Try[LocalProject]] = {
-    safeLocalProjectPrepare(localProject,pathTo).flatMap{
-      case Success(localProject) =>
+    safeLocalProjectPrepare(localProject,pathTo).tryFlatMap{ localProject =>
         localProject.analysisContentsOpt match {
           case Some(analysisContents) =>
-            Task {
-              val fileTo = localProject.remoteCacheOpt.get.toFile
-              val fos = new FileOutputStream(fileTo)
-              val zos = new ZipOutputStream(fos)
-              zos.close()
-              fos.close()
+            TryTask {
               val urlString = ("jar:file:/" + localProject.remoteCacheOpt.get).replace('\\','/')
               val fs = FileSystems.newFileSystem(URI.create(urlString), new util.HashMap[String, AnyRef])
               fs
-            }.bracket{ in =>
-              val t1 = Task[Try[LocalProject]] {Try{
+            }.tryBracket{ in =>
+              val copyFileTask =
                   analysisContents.getMiniSetup.output().getSingleOutput match {
                     case o if o.isPresent =>
-                      Files.copy(o.get().toPath,in.getRootDirectories.iterator.next())
+                      FileSynchronizer.sync(o.get().toPath,in.getRootDirectories.iterator().next())
                     case _ =>
-                      throw  new RuntimeException("Single output is not found.")
+                      Task.now(Failure(new RuntimeException("Single output is not found.")))
                   }
-                  //
-                  localProject
-                }}
-
-              val t2 = Task[Try[LocalProject]]{
-                Try(localProject)
+              val copyAnalysisTask = TryTask{
+                 localProject
               }
-              Task.gather(t1 :: t2 :: Nil).map { eitherList =>
-                val throwList = for (Failure(t) <- eitherList) yield t
-                if (throwList.nonEmpty) {
-                  val re = new RuntimeException()
-                  throwList.foreach{e =>
-                    re.addSuppressed(e)
-                  }
-                  Failure(re)
-                } else {
-                  Success(localProject)
-                }
+              Task.gather(copyFileTask :: copyAnalysisTask :: Nil).groupByTry().tryMap{ _ =>
+                localProject
               }
             } { in =>
               Task{
@@ -117,7 +91,6 @@ object Tasks {
           case None =>
             Task.now(Success(localProject))
         }
-      case Failure(e) => Task.now(Failure(e))
     }
   }
 }
