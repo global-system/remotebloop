@@ -2,7 +2,7 @@ package ru.bitec.remotebloop.rbpcommander
 
 import monix.execution.Scheduler.Implicits.global
 import java.io.{File, FileOutputStream}
-import java.nio.file.{FileSystems, Files, Path}
+import java.nio.file.{FileSystems, Files, Path, Paths}
 import java.net.URI
 import java.util
 import java.util.zip.ZipOutputStream
@@ -12,51 +12,39 @@ import monix.eval.Task
 import monix.reactive.{Observable, OverflowStrategy}
 import sbt.internal.inc.FileAnalysisStore
 
+import scala.util.{Failure, Success, Try}
+
 object Tasks {
   val paralelism: Int = Runtime.getRuntime.availableProcessors
 
-  def save[T](body: => T): Either[Throwable, T] = {
-    try {
-      Right(body)
-    } catch {
-      case e: Exception => Left(e)
-    }
-  }
-
-  def loadLocalProjects(path: Path): Task[Either[List[Throwable], List[LocalProject]]] = {
-    Observable.create[Either[Throwable, File]](OverflowStrategy.Unbounded) { s =>
-      Task{
-        save {
-          (sbt.io.PathFinder(path.toFile) * ("*.json")).get().foreach(f =>
-            s.onNext(Right(f))
-          )
-        } match {
-          case Right(_) => s.onComplete()
-          case Left(e) => s.onError(e)
-        }
-      }.executeAsync.runToFuture
-    }.mapParallelUnordered(paralelism) { fileEither =>
-      Task[Either[Throwable, Config.File]] {
-        fileEither match {
-          case Right(f) =>
+  def loadLocalProjects(path: Path): Task[Try[List[LocalProject]]] = {
+    Task{Try{
+      (sbt.io.PathFinder(path.toFile) * ("*.json")).get()
+    }}.flatMap{
+      case Success(files) =>
+        Observable.fromIterable(files).mapParallelUnordered(paralelism) { file =>
+          Task[Try[Config.File]] {
             import bloop.config.read
-            val config = read(f.toPath)
-            config
-          case Left(e) => Left(e)
+            val config = read(file.toPath)
+            config.fold(Failure(_),Success(_))
+          }
+        }.toListL.map[Try[List[LocalProject]]]{ configTryList =>
+          Try {
+            val fList = for (Failure(e) <- configTryList) yield e
+            if (fList.nonEmpty) {
+              val runtimeException = new RuntimeException("loadLocalProjects is faild")
+              fList.foreach { e =>
+                runtimeException.addSuppressed(e)
+              }
+              throw runtimeException
+            }
+            for (Success(p) <- configTryList) yield LocalProject(project = p.project)
+          }
         }
-      }
-    }.toListL.map { configEitherList =>
-      val eList = for (Left(e) <- configEitherList) yield e
-      if (eList.size > 0) {
-        Left(eList)
-      } else {
-        Right(
-          for (Right(p) <- configEitherList) yield LocalProject(project = p.project)
-        )
-      }
+      case Failure(e) => Task.now(Failure(e))
     }
   }
-  def safeLocalProjectPrepare(localProject: LocalProject,pathTo: Path): Task[Either[Throwable,LocalProject]] = Task{
+  def safeLocalProjectPrepare(localProject: LocalProject,pathTo: Path): Task[Try[LocalProject]] = Task{Try{
     val analysis = (for (s <- localProject.project.scala; a <- s.analysis) yield {
       val file = a.toFile
       if (file.exists()) {
@@ -66,12 +54,8 @@ object Tasks {
       }
     }).flatten
     val fileTo = pathTo.resolve(localProject.project.name+".zip").toFile;
-    val fos = new FileOutputStream(fileTo)
-    val zos = new ZipOutputStream(fos)
-    zos.close()
     analysis match {
       case Some(file) =>
-        save{
           val remoteStore = FileAnalysisStore.binary(file)
           localProject.copy(
             remoteCacheOpt = Some(fileTo.toPath.toAbsolutePath),
@@ -80,42 +64,49 @@ object Tasks {
               case _ => None
             }
           )
-        }
       case None =>
-        Right(localProject.copy(remoteCacheOpt = Some(fileTo.toPath.toAbsolutePath)))
+        localProject.copy(remoteCacheOpt = Some(fileTo.toPath.toAbsolutePath))
     }
-  }
-  def safeLocalProject(localProject: LocalProject,pathTo: Path): Task[Either[List[Throwable],LocalProject]] = {
+  }}
+  def safeLocalProject(localProject: LocalProject,pathTo: Path): Task[Try[LocalProject]] = {
     safeLocalProjectPrepare(localProject,pathTo).flatMap{
-      case Right(localProject) =>
+      case Success(localProject) =>
         localProject.analysisContentsOpt match {
           case Some(analysisContents) =>
             Task {
+              val fileTo = localProject.remoteCacheOpt.get.toFile
+              val fos = new FileOutputStream(fileTo)
+              val zos = new ZipOutputStream(fos)
+              zos.close()
+              fos.close()
               val urlString = ("jar:file:/" + localProject.remoteCacheOpt.get).replace('\\','/')
               val fs = FileSystems.newFileSystem(URI.create(urlString), new util.HashMap[String, AnyRef])
               fs
             }.bracket{ in =>
-              val t1 = Task[Either[Throwable, LocalProject]] {
-                save{
+              val t1 = Task[Try[LocalProject]] {Try{
                   analysisContents.getMiniSetup.output().getSingleOutput match {
                     case o if o.isPresent =>
                       Files.copy(o.get().toPath,in.getRootDirectories.iterator.next())
                     case _ =>
                       throw  new RuntimeException("Single output is not found.")
                   }
-                 //
+                  //
                   localProject
-                }
-              }
-              val t2 = Task[Either[Throwable, LocalProject]] {
-                Right(localProject)
+                }}
+
+              val t2 = Task[Try[LocalProject]]{
+                Try(localProject)
               }
               Task.gather(t1 :: t2 :: Nil).map { eitherList =>
-                val throwList = for (Left(t) <- eitherList) yield t
+                val throwList = for (Failure(t) <- eitherList) yield t
                 if (throwList.nonEmpty) {
-                  Left(throwList)
+                  val re = new RuntimeException()
+                  throwList.foreach{e =>
+                    re.addSuppressed(e)
+                  }
+                  Failure(re)
                 } else {
-                  Right(localProject)
+                  Success(localProject)
                 }
               }
             } { in =>
@@ -124,9 +115,9 @@ object Tasks {
               }
             }
           case None =>
-            Task.now(Right(localProject))
+            Task.now(Success(localProject))
         }
-      case Left(e) => Task.now(Left(e :: Nil))
+      case Failure(e) => Task.now(Failure(e))
     }
   }
 }
