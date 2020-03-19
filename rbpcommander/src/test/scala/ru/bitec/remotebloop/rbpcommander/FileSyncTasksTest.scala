@@ -10,9 +10,9 @@ import scala.concurrent.Await
 import scala.concurrent.duration._
 import scala.util.Failure
 
-class FileSynchronizerTest extends org.scalatest.FunSuite {
+class FileSyncTasksTest extends org.scalatest.FunSuite {
   test("scanPath"){
-    val task = FileSynchronizer.scanPath(Paths.get("rbpcommander"))
+    val task = FileSyncTasks.scanPath(Paths.get("rbpcommander"))
     val result = Await.result(task.runToFuture,10.seconds)
     assert(result.isSuccess)
   }
@@ -20,7 +20,7 @@ class FileSynchronizerTest extends org.scalatest.FunSuite {
     val urlString = ("jar:file:/" + Paths.get("workspace/commons-daemon.zip").toAbsolutePath).replace('\\','/')
     val fs = FileSystems.newFileSystem(URI.create(urlString), new util.HashMap[String, AnyRef])
     try{
-      val task = FileSynchronizer.scanPath(fs.getRootDirectories.iterator().next())
+      val task = FileSyncTasks.scanPath(fs.getRootDirectories.iterator().next())
       val result = Await.result(task.runToFuture,10.seconds)
       assert(result.isSuccess)
     }finally{
@@ -31,7 +31,7 @@ class FileSynchronizerTest extends org.scalatest.FunSuite {
     val urlString = ("jar:file:/" + Paths.get("workspace/test.zip").toAbsolutePath).replace('\\','/')
     val fs = FileSystems.newFileSystem(URI.create(urlString), new util.HashMap[String, AnyRef])
     try{
-      val task = FileSynchronizer.sync(Paths.get("project"),fs.getRootDirectories.iterator().next())
+      val task = FileSyncTasks.sync(Paths.get("project"),fs.getRootDirectories.iterator().next())
       val result = Await.result(task.runToFuture,10.seconds)
       if (result.isFailure){
         val Failure(e) = result

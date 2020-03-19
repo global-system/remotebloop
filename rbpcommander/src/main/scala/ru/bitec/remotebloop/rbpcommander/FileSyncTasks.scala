@@ -54,12 +54,16 @@ class ScanFileVisitor(val rootPath: Path) extends SimpleFileVisitor[Path]{
     )
   }
 }
-object FileSynchronizer {
+object FileSyncTasks {
   import RichTryTask.Implicits._
   def scanPath(sourcePath: Path):Task[Try[ScanFiles]] = TryTask{
+   // val start = System.nanoTime()
     val visitor = new ScanFileVisitor(sourcePath)
     Files.walkFileTree(sourcePath, visitor)
-    visitor.build()
+    val result = visitor.build()
+    //val end = System.nanoTime()-start
+    //println(s"scan ${sourcePath.getFileSystem},$sourcePath \r\n in $end nanos")
+    result
   }
   def syncScanFiles(source: ScanFiles,target: ScanFiles): Task[Try[Int]] = TryTask{
     val needDeleteFiles = ArrayBuffer.empty[FilePath]
