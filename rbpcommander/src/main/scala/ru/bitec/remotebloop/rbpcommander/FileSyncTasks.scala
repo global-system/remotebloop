@@ -57,10 +57,10 @@ class ScanFileVisitor(val rootPath: Path) extends SimpleFileVisitor[Path]{
 }
 object FileSyncTasks {
   import TryTask.Implicits._
-  def scanPath(sourcePath: Path):Task[Try[ScanFiles]] = TryTask{
+  def scanPath(sourceDir: Path):Task[Try[ScanFiles]] = TryTask{
    // val start = System.nanoTime()
-    val visitor = new ScanFileVisitor(sourcePath)
-    Files.walkFileTree(sourcePath, visitor)
+    val visitor = new ScanFileVisitor(sourceDir)
+    Files.walkFileTree(sourceDir, visitor)
     val result = visitor.build()
     //val end = System.nanoTime()-start
     //println(s"scan ${sourcePath.getFileSystem},$sourcePath \r\n in $end nanos")
@@ -146,9 +146,9 @@ object FileSyncTasks {
       list.sum
     }
   }
-  def sync(sourcePath: Path, targetPath: Path): Task[Try[Int]] = {
-    val sourceScanTask = scanPath(sourcePath)
-    val targeScanTask = scanPath(targetPath)
+  def sync(sourceDir: Path, targetDir: Path): Task[Try[Int]] = {
+    val sourceScanTask = scanPath(sourceDir)
+    val targeScanTask = scanPath(targetDir)
     Task.parZip2(sourceScanTask,targeScanTask).flatMap{
       case (Success(sourceScanFiles),Success(targetScanFiles)) =>
         syncScanFiles(sourceScanFiles,targetScanFiles)

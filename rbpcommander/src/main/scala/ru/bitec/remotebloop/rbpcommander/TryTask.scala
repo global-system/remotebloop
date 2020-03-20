@@ -74,4 +74,7 @@ object TryTask {
   def apply[T](body: => T):Task[Try[T]] = {
     Task.eval(Try(body))
   }
+  def now[T](body: => T):Task[Try[T]] = {
+    Task.now(Try{body})
+  }
 }

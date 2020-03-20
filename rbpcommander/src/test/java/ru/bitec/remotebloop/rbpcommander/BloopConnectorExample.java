@@ -7,7 +7,7 @@ import java.util.Collections;
 
 public class BloopConnectorExample {
     BloopConnection bc = new BloopConnection(
-            java.nio.file.Paths.get("C:\\vcs\\git\\globalsystem\\remotebloop").toAbsolutePath().normalize()
+            java.nio.file.Paths.get("C:/vcs/git/globalsystem/remotebloop").toAbsolutePath().normalize()
     );
     String ti = "file:///C:/vcs/git/globalsystem/remotebloop?id=rbpcommander";
     void printScalaOption() throws Exception{

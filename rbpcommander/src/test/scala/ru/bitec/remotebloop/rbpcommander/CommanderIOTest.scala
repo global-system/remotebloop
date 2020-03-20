@@ -6,4 +6,8 @@ class CommanderIOTest extends org.scalatest.FunSuite {
      val result = CommanderIO.emptyStamp()
      println(result)
    }
+  test("sharedDirs"){
+    val result = CommanderIO.sharedDirs()
+    assert(result.size>0)
+  }
 }

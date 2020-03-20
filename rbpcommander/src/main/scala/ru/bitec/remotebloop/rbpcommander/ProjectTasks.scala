@@ -6,23 +6,22 @@ import java.net.URI
 import java.util
 import java.util.zip.ZipOutputStream
 
-import bloop.config.Config
-import bloop.config.Config.{JvmConfig, Project}
+
+import bloop.config.Config.Project
 import monix.eval.Task
 import monix.reactive.Observable
-import ru.bitec.remotebloop.rbpcommander.analysis.{ConfigProject, PathMapper, RootDir}
-import sbt.internal.inc.FileAnalysisStore
+import ru.bitec.remotebloop.rbpcommander.analysis.{ConfigProject, PathMapper}
 import xsbti.compile.AnalysisContents
 
-import scala.collection.mutable.ArrayBuffer
 import scala.util.{Failure, Success, Try}
 
 case class LocalProject(
                          project: Project,
                          analysisContentsOpt: Option[AnalysisContents] = None,
-                         remoteCacheOpt: Option[Path] = None)
+                         remoteCacheOpt: Option[Path] = None,
+                         remoteAnalysisContentsOpt: Option[AnalysisContents] = None,
+                       )
 
-case class RemoteProject(project: Project, analysisContentsOpt: Option[AnalysisContents])
 
 object ProjectTasks {
 
@@ -30,9 +29,9 @@ object ProjectTasks {
 
   val paralelism: Int = Runtime.getRuntime.availableProcessors
 
-  def loadLocalProjects(path: Path): Task[Try[List[LocalProject]]] = {
+  def loadLocalProjects(directory: Path): Task[Try[List[LocalProject]]] = {
     TryTask {
-      (sbt.io.PathFinder(path.toFile) * "*.json").get()
+      (sbt.io.PathFinder(directory.toFile) * "*.json").get()
     }.tryFlatMap { files =>
       Observable.fromIterable(files).mapParallelUnordered(paralelism) { file =>
         TryTask {
@@ -43,8 +42,8 @@ object ProjectTasks {
     }
   }
 
-  def saveLocalProjectPrepare(localProject: LocalProject, pathTo: Path): Task[Try[LocalProject]] = TryTask {
-    val fileTo = pathTo.resolve(localProject.project.name + ".zip").toFile
+  def saveLocalProjectPrepare(localProject: LocalProject, targetDir: Path): Task[Try[LocalProject]] = TryTask {
+    val fileTo = targetDir.resolve(localProject.project.name + ".zip").toFile
     if (!fileTo.exists()) {
       for (
         fos <- Using(new FileOutputStream(fileTo));
@@ -58,17 +57,27 @@ object ProjectTasks {
     )
   }
 
-  def saveLocalProjectAnalysis(localProject: LocalProject, pathTo: Path): Task[Try[Int]] = TryTask {
+
+  def saveLocalProjectAnalysis(localProject: LocalProject, targetFile: Path): Task[Try[Int]] = TryTask {
     val mapper = PathMapper.fromConfigProject(localProject.project)
     val ac = localProject.analysisContentsOpt.get
     ConfigProject.saveLocalAnalysisToPortable(
-      localProject.project,pathTo, ac, mapper
+      localProject.project, targetFile, ac, mapper
     )
     1
   }
 
-  def saveLocalProject(localProject: LocalProject, pathTo: Path): Task[Try[LocalProject]] = {
-    saveLocalProjectPrepare(localProject, pathTo).tryFlatMap { localProject =>
+  def restoreLocalProjectAnalysis(localProject: LocalProject, targetFile: Path): Task[Try[Int]] = TryTask {
+    val mapper = PathMapper.fromConfigProject(localProject.project)
+    val ac = localProject.remoteAnalysisContentsOpt.get
+    ConfigProject.restoreLocalAnalysisFromPortable(
+      localProject.project, targetFile, ac, mapper
+    )
+    1
+  }
+
+  def saveLocalProject(localProject: LocalProject, targetPath: Path): Task[Try[LocalProject]] = {
+    saveLocalProjectPrepare(localProject, targetPath).tryFlatMap { localProject =>
       localProject.analysisContentsOpt match {
         case Some(analysisContents) =>
           TryTask {
@@ -76,7 +85,7 @@ object ProjectTasks {
             val fs = FileSystems.newFileSystem(URI.create(urlString), new util.HashMap[String, AnyRef])
             val rootPath = fs.getRootDirectories.iterator().next()
             val classesPath = rootPath.resolve("classes")
-            if (!Files.exists(classesPath)){
+            if (!Files.exists(classesPath)) {
               Files.createDirectory(classesPath)
             }
             fs
@@ -89,7 +98,7 @@ object ProjectTasks {
                 case _ =>
                   Task.now(Failure(new RuntimeException("Single output is not found.")))
               }
-            val copyAnalysisTask = saveLocalProjectAnalysis(localProject,rootPath.resolve("analysis.zip"))
+            val copyAnalysisTask = saveLocalProjectAnalysis(localProject, rootPath.resolve("analysis.zip"))
             Task.gather(copyFileTask :: copyAnalysisTask :: Nil).groupByTry().tryMap { _ =>
               localProject
             }
@@ -104,6 +113,62 @@ object ProjectTasks {
     }
   }
 
+  def restoreLocalProject(localProject: LocalProject, sourcePath: Path): Task[Try[LocalProject]] = {
+    TryTask{
+      val fileTo = sourcePath.resolve(localProject.project.name + ".zip")
+      if (!Files.exists(fileTo)){
+        throw  new RuntimeException("Cache file is not found")
+      }
+      localProject.copy(
+        remoteCacheOpt = Some(fileTo.toAbsolutePath),
+      )
+    }.tryFlatMap{ LocalProject =>
+      TryTask {
+        val urlString = ("jar:file:/" + LocalProject.remoteCacheOpt.get).replace('\\', '/')
+        val fs = FileSystems.newFileSystem(URI.create(urlString), new util.HashMap[String, AnyRef])
+        fs
+      }.tryBracket { in =>
+        TryTask{
+          val filePath = in.getRootDirectories.iterator().next().resolve("analysis.zip");
+          val analysis=ConfigProject.loadRemoteAnalysis(localProject.project,filePath)
+          localProject.copy(
+            remoteAnalysisContentsOpt = Some(analysis)
+          )
+        }.tryFlatMap{ localProject =>
+          val targetAnalysisFile =
+            for(s <- localProject.project.scala;
+                a <- s.analysis) yield (a)
+          targetAnalysisFile match {
+            case Some(analysisFile) =>
+              val rootFromPath = in.getRootDirectories.iterator().next()
+              val copyFileTask =
+                localProject.remoteAnalysisContentsOpt.get.getMiniSetup.output().getSingleOutput match {
+                  case o if o.isPresent =>
+                    val toPath =localProject.project.out.resolve(
+                      o.get().toString.replace('\\','/').stripPrefix("ord_root_out./")
+                    );
+                    Files.createDirectories(toPath)
+                    FileSyncTasks.sync(rootFromPath.resolve("classes"), toPath)
+                  case _ =>
+                    Task.now(Failure(new RuntimeException("Single output is not found.")))
+                }
+             val copyAnalysisTask = restoreLocalProjectAnalysis(localProject, analysisFile)
+             Task.gather(copyFileTask :: copyAnalysisTask :: Nil).groupByTry().tryMap { _ =>
+               localProject
+             }
+            case None =>
+              TryTask.now(localProject)
+          }
+        }
+      } { in =>
+        Task {
+          in.close()
+        }
+      }
+    }
+
+  }
+
   def saveLocalProjects(bloopPath: Path, targetPath: Path): Task[Try[List[LocalProject]]] = {
     loadLocalProjects(bloopPath).tryFlatMap { projectList =>
       Observable.fromIterable(projectList).mapParallelUnordered(paralelism) { project =>
@@ -112,5 +177,12 @@ object ProjectTasks {
     }
   }
 
+  def restoreLocalProjects(bloopPath: Path, sourcePath: Path): Task[Try[List[LocalProject]]] = {
+    loadLocalProjects(bloopPath).tryFlatMap { projectList =>
+      Observable.fromIterable(projectList).mapParallelUnordered(paralelism) { project =>
+        restoreLocalProject(project, sourcePath)
+      }.toListL.groupByTry()
+    }
+  }
 
 }

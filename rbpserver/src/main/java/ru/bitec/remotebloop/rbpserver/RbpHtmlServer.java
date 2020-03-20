@@ -4,6 +4,7 @@ import java.net.URI;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.util.concurrent.CompletableFuture;
@@ -29,7 +30,7 @@ public class RbpHtmlServer {
         @Parameter(names = "stop", description = "stop server")
         private boolean stop=false;
     }
-    public static final String fileLockName = "workspace\\.rbpserver\\lock\\port.txt";
+    public static final Path fileLockPath = Paths.get("workspace/.rbpserver/lock/port.txt");
     public static final CompletableFuture<Void> serverWork = new CompletableFuture<>();
     public static void main(String[] argArray) throws IOException {
         Args args = new Args();
@@ -47,7 +48,7 @@ public class RbpHtmlServer {
     }
     public static void start(Args args) throws IOException{
         HttpServer httpServer = createHttpServer(args.port);
-        try(FileChannel fch = FileChannel.open(Paths.get(fileLockName),
+        try(FileChannel fch = FileChannel.open(fileLockPath,
                 StandardOpenOption.CREATE,
                 StandardOpenOption.WRITE,
                 StandardOpenOption.SYNC)){
@@ -78,10 +79,10 @@ public class RbpHtmlServer {
             httpServer.shutdownNow();
         }
         //noinspection ResultOfMethodCallIgnored
-        (new File(fileLockName)).delete();
+        fileLockPath.toFile().delete();
     }
     public static void stop() throws IOException{
-       String  content = new String ( Files.readAllBytes( Paths.get(fileLockName) ) );
+       String  content = new String ( Files.readAllBytes( fileLockPath ) );
        int port = Integer.valueOf(content);
        String stopString = "http://localhost:"+port+"/api/stopserver";
         try (final CloseableHttpClient httpclient = HttpClients.createDefault()) {

@@ -1,9 +1,10 @@
 package ru.bitec.remotebloop.rbpcommander;
 
-import com.beust.jcommander.JCommander;
 import com.beust.jcommander.Parameter;
 
 import java.io.IOException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.concurrent.CompletableFuture;
 
 public class RbpCommander {
@@ -15,7 +16,7 @@ public class RbpCommander {
         @Parameter(names = "--help", help = true)
         private boolean help;
     }
-    public static final String fileLockName = "workspace\\.rbpserver\\lock\\port.txt";
+    public static final Path fileLockPath = Paths.get("workspace/.rbpserver/lock/port.txt");
     public static final CompletableFuture<Void> serverWork = new CompletableFuture<>();
     public static void main(String[] argArray) throws IOException {
 

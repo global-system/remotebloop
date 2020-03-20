@@ -68,7 +68,8 @@ lazy val commonDependencies = Seq(
   "org.apache.httpcomponents" % "httpclient" % "4.5.11",
   "commons-io" % "commons-io" % "2.6",
   "org.scala-sbt" %% "io" % "1.3.3",
-  "org.scalatest" %% "scalatest" % "3.1.1" % "test"
+  "org.scalatest" %% "scalatest" % "3.1.1" % "test",
+  "com.typesafe.play" %% "play-json" % "2.8.1"
 )
 
 lazy val settings = commonSettings  

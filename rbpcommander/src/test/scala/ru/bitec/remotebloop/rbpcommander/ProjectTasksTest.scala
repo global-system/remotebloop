@@ -16,7 +16,20 @@ class ProjectTasksTest extends org.scalatest.FunSuite {
     val f = ProjectTasks.loadLocalProjects(Paths.get(".bloop") ).runToFuture
     val result = Await.result(f,10.seconds)
     val project = result.get.filter{p=> p.project.name.equals("rbpcommander")}.head
-    val st = ProjectTasks.saveLocalProject(project,Paths.get("workspace").toAbsolutePath)
+    val st = ProjectTasks.saveLocalProject(project,Paths.get("workspace/save").toAbsolutePath)
+    val stResult = Await.result(st.runToFuture,1.hours)
+    stResult match {
+      case Failure(e) =>
+        e.printStackTrace()
+      case _ =>
+    }
+    assert(stResult.isSuccess)
+  }
+  test("restoreLocalProject"){
+    val f = ProjectTasks.loadLocalProjects(Paths.get(".bloop") ).runToFuture
+    val result = Await.result(f,10.seconds)
+    val project = result.get.filter{p=> p.project.name.equals("rbpcommander")}.head
+    val st = ProjectTasks.restoreLocalProject(project,Paths.get("workspace/save").toAbsolutePath)
     val stResult = Await.result(st.runToFuture,1.hours)
     stResult match {
       case Failure(e) =>
@@ -28,7 +41,7 @@ class ProjectTasksTest extends org.scalatest.FunSuite {
   test("saveLocalProjects"){
     val st = ProjectTasks.saveLocalProjects(
       Paths.get(".bloop"),
-      Paths.get("workspace\\save").toAbsolutePath
+      Paths.get("workspace/save").toAbsolutePath
     )
     val stResult = Await.result(st.runToFuture,1.hours)
     if (stResult.isFailure) {

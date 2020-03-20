@@ -1,8 +1,9 @@
 package ru.bitec.remotebloop.rbpcommander
 
 import java.io.File
-import java.nio.file.Path
+import java.nio.file.{Files, Path, Paths}
 
+import play.api.libs.json.{JsObject, Json}
 import sbt.internal.inc.Stamper
 import xsbti.compile.analysis.Stamp
 
@@ -27,5 +28,9 @@ object CommanderIO {
   }
   def lastModifiedFromLong(lastModified: Long):Stamp = {
     stampFromString(s"lastModified($lastModified)")
+  }
+  def sharedDirs():List[(String,Path)]  = {
+    val jv = Json.parse(Files.readAllBytes(Paths.get("config/shareddirs.json")))
+    jv.as[JsObject].value.toList.map(v => v._1 -> Paths.get(v._2.as[String]))
   }
 }

@@ -11,6 +11,7 @@ import scala.collection.mutable.ArrayBuffer
 
 
 case class RootDir(key:String, path: Path){
+  //for optimization
   val pathString = if (CommanderIO.isFileSystemCaseSensitive) path.toString else path.toString.toLowerCase()
 }
 
@@ -27,6 +28,7 @@ case class RootDirMaps(rootDirs:List[RootDir]){
     var curRootDir: String = null
     var i =0
     val unSavePathString = path.toAbsolutePath.toString
+    //for optimization
     val pathString = if (CommanderIO.isFileSystemCaseSensitive) unSavePathString else unSavePathString.toLowerCase()
     val size = pathArray.length
     while(i<size && curRootDir == null){
@@ -115,7 +117,9 @@ object PathMapper{
       arrayBuffer.append(RootDir("ird_jvm_home", home.toAbsolutePath))
     }
     arrayBuffer.append(RootDir("ird_project_dir", configProject.directory.toAbsolutePath))
-    arrayBuffer.append(RootDir("ird_maven",Paths.get( "C:\\Users\\AMatveev\\AppData\\Local\\Coursier\\cache\\v1\\https\\repo1.maven.org\\maven2")))
+    CommanderIO.sharedDirs().foreach{case (key,path) =>
+      arrayBuffer.append(RootDir(s"ird_$key",path))
+    }
     RootDirMaps(arrayBuffer.toList)
   }
   private def getOutRootDirs(configProject: Project): RootDirMaps = {
