@@ -2,6 +2,7 @@ package ru.bitec.remotebloop.rbpcommander.analysis
 
 import java.io.File
 
+import ru.bitec.remotebloop.rbpcommander.CommanderIO
 import sbt.internal.inc.Stamper
 import xsbti.compile.MiniSetup
 import xsbti.compile.analysis.{ReadMapper, Stamp}
@@ -49,7 +50,7 @@ class TraceReadMapper extends ReadMapper {
 
   override  def mapBinaryStamp(file: File, binaryStamp: Stamp): Stamp = {
     val stam1 = Stamper.forLastModified(file)
-    val stamp2 = AnalysisIO.getFileLastModified(file.toPath)
+    val stamp2 = CommanderIO.lastModifiedFromPath(file.toPath)
     val stamp3 = Stamper.forLastModified
     println(s"mapBinaryStamp:$file,$binaryStamp")
     binaryStamp

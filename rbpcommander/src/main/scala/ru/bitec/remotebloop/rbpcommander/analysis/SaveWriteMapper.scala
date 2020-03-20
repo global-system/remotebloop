@@ -2,43 +2,56 @@ package ru.bitec.remotebloop.rbpcommander.analysis
 
 import java.io.File
 
-import xsbti.compile.{FileHash, MiniOptions, MiniSetup}
+import xsbti.compile.MiniSetup
 import xsbti.compile.analysis.{Stamp, WriteMapper}
 
-class SaveWriteMapper(inRootDirMaps: RootDirMaps, outRootDirMaps: RootDirMaps, rootFileMaps: RootFileMaps, fileMetaMaps: FileMetaMaps) extends WriteMapper{
+class SaveWriteMapper(pathMapper:PathMapper) extends WriteMapper{
   override def mapSourceFile(sourceFile: File): File = {
-    val result=inRootDirMaps.toPortableFile(sourceFile)
+    val result=pathMapper.inRootDirMaps.toPortableFile(sourceFile)
     result.get
   }
 
   override def mapBinaryFile(binaryFile: File): File = {
-    val rf = rootFileMaps.toPortableFile(binaryFile)
+    val rf = pathMapper.rootFileMaps.toPortableFile(binaryFile)
     rf match {
       case Some(f) => f
       case None =>
-        val rd = inRootDirMaps.toPortableFile(binaryFile)
+        val rd = pathMapper.inRootDirMaps.toPortableFile(binaryFile)
+        if (rd.isEmpty){
+          //for breakpoint
+          throw  new RuntimeException("mapClasspathEntry is faild")
+        }
         rd.get
     }
   }
 
   override def mapProductFile(productFile: File): File = {
-    val sf=outRootDirMaps.toPortableFile(productFile)
+    val sf=pathMapper.outRootDirMaps.toPortableFile(productFile)
     sf.get
   }
 
   override def mapOutputDir(outputDir: File): File = {
-    val sf=outRootDirMaps.toPortableFile(outputDir)
+    val sf=pathMapper.outRootDirMaps.toPortableFile(outputDir)
     sf.get
   }
 
   override def mapSourceDir(sourceDir: File): File = {
-    val sf=inRootDirMaps.toPortableFile(sourceDir)
+    val sf=pathMapper.inRootDirMaps.toPortableFile(sourceDir)
     sf.get
   }
 
   override def mapClasspathEntry(classpathEntry: File): File = {
-    val result = rootFileMaps.toPortableFile(classpathEntry)
-    result.get
+    val rf = pathMapper.rootFileMaps.toPortableFile(classpathEntry)
+    rf match {
+      case Some(f) => f
+      case None =>
+        val rd = pathMapper.inRootDirMaps.toPortableFile(classpathEntry)
+        if (rd.isEmpty){
+          //for breakpoint
+          throw  new RuntimeException("mapClasspathEntry is faild")
+        }
+        rd.get
+    }
   }
 
   override def mapJavacOption(javacOption: String): String = {

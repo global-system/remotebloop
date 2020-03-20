@@ -8,7 +8,7 @@ class TestAnalysisTest extends org.scalatest.FunSuite {
     TestAnalysis.traceReadAnalysis(fromFile)
   }
   test("readPortable"){
-    val fromFile = Paths.get("workspace\\save\\rbpcommander.bin.zip")
+    val fromFile = Paths.get("workspace\\save\\analysis.zip")
     val a = TestAnalysis.traceReadAnalysis(fromFile)
     assert(a!=null)
   }

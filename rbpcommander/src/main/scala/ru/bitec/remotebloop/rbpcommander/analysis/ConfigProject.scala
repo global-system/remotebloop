@@ -1,54 +1,15 @@
 package ru.bitec.remotebloop.rbpcommander.analysis
 
-import java.nio.file.Path
+import java.nio.file.{Files, Path, StandardCopyOption}
 
-import bloop.config.Config.{JvmConfig, Project}
+import bloop.config.Config.Project
 import sbt.internal.inc.{Analysis, FileAnalysisStore}
 import xsbti.compile.AnalysisContents
 import xsbti.compile.analysis.{ReadMapper, ReadWriteMappers}
 
-import scala.collection.mutable.ArrayBuffer
 
 object ConfigProject {
-  def getInRootDirs(configProject: Project): RootDirMaps = {
-    val arrayBuffer = ArrayBuffer.empty[RootDir]
-    for (platform <- configProject.platform;
-         jvmConfig <- Option(platform.config).collect { case c: JvmConfig => c };
-         home <- jvmConfig.home
-         ) {
-      arrayBuffer.append(RootDir("rd_jvm_home", home.toAbsolutePath))
-    }
-    arrayBuffer.append(RootDir("rd_project_dir", configProject.directory.toAbsolutePath))
-    new RootDirMaps(arrayBuffer.toList)
-  }
-  def getOutRootDirs(configProject: Project,analysisContents: AnalysisContents): RootDirMaps = {
-    val arrayBuffer = ArrayBuffer.empty[RootDir]
-    arrayBuffer.append(RootDir("ou_root_out", configProject.out.toAbsolutePath))
-/*    val comps = analysisContents.getAnalysis.readCompilations().getAllCompilations
-      comps.foreach{c =>
-      c.getOutput.getSingleOutput match{
-        case o if o.isPresent =>
-          arrayBuffer.append(RootDir(s"co_last_compilation", o.get().toPath.toAbsolutePath))
-        case _ =>
-      }
-    }*/
-      analysisContents.getMiniSetup.output().getSingleOutput match{
-      case o if o.isPresent =>
-        arrayBuffer.append(RootDir("ou_single_out", o.get().toPath.toAbsolutePath))
-      case _ =>
-    }
-    RootDirMaps(arrayBuffer.toList)
-  }
-  def getRootFiles(configProject: Project): RootFileMaps = {
-    val arrayBuffer = ArrayBuffer.empty[RootFile]
-    for (resolution <- configProject.resolution;
-         module <- resolution.modules;
-         artifact <- module.artifacts if artifact.classifier.isEmpty
-         ) {
-      arrayBuffer.append(RootFile(s"rf_${module.organization}_${artifact.name}".toLowerCase, artifact.path.toAbsolutePath))
-    }
-    new RootFileMaps(arrayBuffer.toList)
-  }
+
 
   def loadProject(path: Path): Project = {
     import bloop.config.read
@@ -74,15 +35,31 @@ object ConfigProject {
     analysis
   }
 
-  def saveLocalAnalysisToPortable( pathTo: Path,
+  def saveLocalAnalysisToPortable( project: Project,
+                                   pathTo: Path,
                                    analysisContents: AnalysisContents,
-                                   rootInDirMaps: RootDirMaps,
-                                   rootOutDirMaps: RootDirMaps,
-                                   rootFileMaps: RootFileMaps,
-                                   fileMetaMaps: FileMetaMaps
+                                   pathMapper: PathMapper
                                  ): Unit = {
+    val out = project.out
+    val tempFile = out.resolve("tmpOutAnalisys.zip")
     val readMapper = ReadMapper.getEmptyMapper
-    val writeMapper = new SaveWriteMapper(rootInDirMaps,rootOutDirMaps,rootFileMaps,fileMetaMaps)
+    val writeMapper = new SaveWriteMapper(pathMapper)
+    val mappers = new ReadWriteMappers(readMapper, writeMapper)
+    val currentAnalysis = analysisContents.getAnalysis.asInstanceOf[Analysis]
+    val currentSetup = analysisContents.getMiniSetup
+    val store = FileAnalysisStore.binary(tempFile.toFile,mappers)
+    val contents = AnalysisContents.create(currentAnalysis, currentSetup)
+    store.set(contents)
+    Files.move(tempFile,pathTo,StandardCopyOption.REPLACE_EXISTING)
+  }
+
+  def restoreLocalAnalysisFromPortable( project: Project,
+                                        pathTo: Path,
+                                        analysisContents: AnalysisContents,
+                                        pathMapper: PathMapper
+                                      ): Unit = {
+    val readMapper = ReadMapper.getEmptyMapper
+    val writeMapper = new RestoreWriteMapper(pathMapper)
     val mappers = new ReadWriteMappers(readMapper, writeMapper)
     val currentAnalysis = analysisContents.getAnalysis.asInstanceOf[Analysis]
     val currentSetup = analysisContents.getMiniSetup

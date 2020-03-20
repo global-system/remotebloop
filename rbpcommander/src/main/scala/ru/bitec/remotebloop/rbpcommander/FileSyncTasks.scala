@@ -15,6 +15,7 @@ trait ScanPath{
     key.replace("/",sep)
   }
 }
+
 case class DirPath(key: String,path: Path,level: Int) extends ScanPath
 case class FilePath(key: String,path: Path,level: Int,hash:String) extends ScanPath
 case class ScanFiles(root:Path, dirs: Map[String,DirPath],files: Map[String,FilePath])
@@ -55,7 +56,7 @@ class ScanFileVisitor(val rootPath: Path) extends SimpleFileVisitor[Path]{
   }
 }
 object FileSyncTasks {
-  import RichTryTask.Implicits._
+  import TryTask.Implicits._
   def scanPath(sourcePath: Path):Task[Try[ScanFiles]] = TryTask{
    // val start = System.nanoTime()
     val visitor = new ScanFileVisitor(sourcePath)
