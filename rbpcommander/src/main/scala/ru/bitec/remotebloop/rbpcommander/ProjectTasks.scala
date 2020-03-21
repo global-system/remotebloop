@@ -77,8 +77,8 @@ object ProjectTasks {
     1
   }
 
-  def saveLocalProject(localProject: LocalProject, targetPath: Path): Task[Try[LocalProject]] = {
-    saveLocalProjectPrepare(localProject, targetPath).tryFlatMap { localProject =>
+  def saveLocalProject(localProject: LocalProject, targetDir: Path): Task[Try[LocalProject]] = {
+    saveLocalProjectPrepare(localProject, targetDir.toAbsolutePath).tryFlatMap { localProject =>
       localProject.analysisContentsOpt match {
         case Some(analysisContents) =>
           TryTask {
@@ -106,6 +106,7 @@ object ProjectTasks {
           } { in =>
             Task {
               in.close()
+              println(s"""Saving "${localProject.project.name}" is completed""")
             }
           }
         case None =>
@@ -114,9 +115,9 @@ object ProjectTasks {
     }
   }
 
-  def restoreLocalProject(localProject: LocalProject, sourcePath: Path): Task[Try[LocalProject]] = {
+  def restoreLocalProject(localProject: LocalProject, sourceDir: Path): Task[Try[LocalProject]] = {
     TryTask{
-      val fileTo = sourcePath.resolve(localProject.project.name + ".zip")
+      val fileTo = sourceDir.toAbsolutePath.resolve(localProject.project.name + ".zip")
       if (!Files.exists(fileTo)){
         throw  new RuntimeException("Cache file is not found")
       }
@@ -164,24 +165,25 @@ object ProjectTasks {
       } { in =>
         Task {
           in.close()
+          println(s"""Restoring "${localProject.project.name}" is completed""")
         }
       }
     }
 
   }
 
-  def saveLocalProjects(bloopPath: Path, targetPath: Path): Task[Try[List[LocalProject]]] = {
-    loadLocalProjects(bloopPath).tryFlatMap { projectList =>
+  def saveLocalProjects(bloopConfigDir: Path, targetDir: Path): Task[Try[List[LocalProject]]] = {
+    loadLocalProjects(bloopConfigDir).tryFlatMap { projectList =>
       Observable.fromIterable(projectList).mapParallelUnordered(paralelism) { project =>
-        saveLocalProject(project, targetPath)
+        saveLocalProject(project, targetDir)
       }.toListL.groupByTry()
     }
   }
 
-  def restoreLocalProjects(bloopPath: Path, sourcePath: Path): Task[Try[List[LocalProject]]] = {
-    loadLocalProjects(bloopPath).tryFlatMap { projectList =>
+  def restoreLocalProjects(bloopConfigDir: Path, sourceDir: Path): Task[Try[List[LocalProject]]] = {
+    loadLocalProjects(bloopConfigDir).tryFlatMap { projectList =>
       Observable.fromIterable(projectList).mapParallelUnordered(paralelism) { project =>
-        restoreLocalProject(project, sourcePath)
+        restoreLocalProject(project, sourceDir)
       }.toListL.groupByTry()
     }
   }
