@@ -54,7 +54,8 @@ lazy val rbpcommander = project
       "ch.epfl.scala" % "bsp4j" % "2.0.0-M6",
       "ch.epfl.scala" %% "bloop-config" % "1.4.0-RC1",
       "io.monix" %% "monix" % "3.1.0"
-    )
+    ),
+    testOptions in Test += Tests.Argument(TestFrameworks.ScalaTest, "-l","ru.bitec.remotebloop.rbpcommander.ManualTag")
   )
 lazy val rbplauncher = project
   .settings(

@@ -34,21 +34,25 @@ object ConfigProject {
     }).flatten
     analysis
   }
-  def loadRemoteAnalysis(project: Project, fileFromPath: Path): AnalysisContents = {
-    val out = project.out
-    val tempFile = out.resolve("tmpOutAnalisys.zip")
-    try{
-      Files.copy(fileFromPath,tempFile,StandardCopyOption.REPLACE_EXISTING)
-      val readMapper = ReadMapper.getEmptyMapper
-      val writeMapper = WriteMapper.getEmptyMapper
-      val mappers = new ReadWriteMappers(readMapper, writeMapper)
-      val remoteStore = FileAnalysisStore.binary(tempFile.toFile, mappers)
-      val analysis = remoteStore.get().get()
-      analysis
-    }finally{
-      if (Files.exists(tempFile)){
-        Files.delete(tempFile)
+  def loadRemoteAnalysis(project: Project, fileFromPath: Path): Option[AnalysisContents] = {
+    if (Files.exists(fileFromPath)){
+      val out = project.out
+      val tempFile = out.resolve(s"tmpInAnalisys-${project.name}.zip")
+      try{
+        Files.copy(fileFromPath,tempFile,StandardCopyOption.REPLACE_EXISTING)
+        val readMapper = ReadMapper.getEmptyMapper
+        val writeMapper = WriteMapper.getEmptyMapper
+        val mappers = new ReadWriteMappers(readMapper, writeMapper)
+        val remoteStore = FileAnalysisStore.binary(tempFile.toFile, mappers)
+        val analysis = remoteStore.get().get()
+        Some(analysis)
+      }finally{
+        if (Files.exists(tempFile)){
+          Files.delete(tempFile)
+        }
       }
+    } else {
+      None
     }
   }
 
@@ -58,7 +62,7 @@ object ConfigProject {
                                   pathMapper: PathMapper
                                  ): Unit = {
     val out = project.out
-    val tempFile = out.resolve("tmpOutAnalisys.zip")
+    val tempFile = out.resolve(s"tmpOutAnalisys-${project.name}.zip")
     val readMapper = ReadMapper.getEmptyMapper
     val writeMapper = new SaveWriteMapper(pathMapper)
     val mappers = new ReadWriteMappers(readMapper, writeMapper)

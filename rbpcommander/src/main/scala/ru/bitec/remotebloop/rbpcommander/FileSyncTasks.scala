@@ -60,7 +60,9 @@ object FileSyncTasks {
   def scanPath(sourceDir: Path):Task[Try[ScanFiles]] = TryTask{
    // val start = System.nanoTime()
     val visitor = new ScanFileVisitor(sourceDir)
-    Files.walkFileTree(sourceDir, visitor)
+    if (Files.exists(sourceDir)){
+      Files.walkFileTree(sourceDir, visitor)
+    }
     val result = visitor.build()
     //val end = System.nanoTime()-start
     //println(s"scan ${sourcePath.getFileSystem},$sourcePath \r\n in $end nanos")

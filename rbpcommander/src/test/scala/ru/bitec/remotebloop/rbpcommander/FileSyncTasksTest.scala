@@ -27,7 +27,7 @@ class FileSyncTasksTest extends org.scalatest.FunSuite {
       fs.close()
     }
   }
-  test("syncZipPath"){
+  test("syncZipPath",ManualTag){
     val urlString = ("jar:file:/" + Paths.get("workspace/test.zip").toAbsolutePath).replace('\\','/')
     val fs = FileSystems.newFileSystem(URI.create(urlString), new util.HashMap[String, AnyRef])
     try{

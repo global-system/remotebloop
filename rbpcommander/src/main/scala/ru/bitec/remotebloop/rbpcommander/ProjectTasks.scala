@@ -45,6 +45,7 @@ object ProjectTasks {
   def saveLocalProjectPrepare(localProject: LocalProject, targetDir: Path): Task[Try[LocalProject]] = TryTask {
     val fileTo = targetDir.resolve(localProject.project.name + ".zip").toFile
     if (!fileTo.exists()) {
+      Files.createDirectories(targetDir)
       for (
         fos <- Using(new FileOutputStream(fileTo));
         _ <- Using(new ZipOutputStream(fos))) {
@@ -129,20 +130,20 @@ object ProjectTasks {
         fs
       }.tryBracket { in =>
         TryTask{
-          val filePath = in.getRootDirectories.iterator().next().resolve("analysis.zip");
-          val analysis=ConfigProject.loadRemoteAnalysis(localProject.project,filePath)
+          val file = in.getRootDirectories.iterator().next().resolve("analysis.zip")
+          val analysis=ConfigProject.loadRemoteAnalysis(localProject.project,file)
           localProject.copy(
-            remoteAnalysisContentsOpt = Some(analysis)
+            remoteAnalysisContentsOpt = analysis
           )
         }.tryFlatMap{ localProject =>
           val targetAnalysisFile =
             for(s <- localProject.project.scala;
                 a <- s.analysis) yield (a)
-          targetAnalysisFile match {
-            case Some(analysisFile) =>
+          (targetAnalysisFile,localProject.remoteAnalysisContentsOpt)  match {
+            case (Some(analysisFile),Some(remoteAnalysisContents)) =>
               val rootFromPath = in.getRootDirectories.iterator().next()
               val copyFileTask =
-                localProject.remoteAnalysisContentsOpt.get.getMiniSetup.output().getSingleOutput match {
+                remoteAnalysisContents.getMiniSetup.output().getSingleOutput match {
                   case o if o.isPresent =>
                     val toPath =localProject.project.out.resolve(
                       o.get().toString.replace('\\','/').stripPrefix("ord_root_out./")
@@ -156,7 +157,7 @@ object ProjectTasks {
              Task.gather(copyFileTask :: copyAnalysisTask :: Nil).groupByTry().tryMap { _ =>
                localProject
              }
-            case None =>
+            case _ =>
               TryTask.now(localProject)
           }
         }
