@@ -8,14 +8,16 @@ lazy val global = project
   .in(file("."))
   .settings(settings,
     mappings in Universal ++= directory("bin"),
-    mappings in Universal ++= directory("config"),
+    mappings in Universal ++= {
+      directory("config.origin").map{case (file,_)=> file -> ("config/" + file.name)}
+    },
     mappings in Universal += {
       val jar = (packageBin in Compile in rbpserver).value
-      jar -> ("lib\\rbpserver\\" + jar.getName)
+      jar -> ("lib/rbpserver/" + jar.getName)
     },
     mappings in Universal ++= {
       val files = (externalDependencyClasspath in Runtime in rbpserver).value
-      files.map{f => f.data -> ("lib\\rbpserver\\"+f.data.name)}
+      files.map{f => f.data -> ("lib/rbpserver/"+f.data.name)}
     }/*,
     mappings in Universal ++= {
       val files = (externalDependencyClasspath in Runtime in rbplauncher).value
