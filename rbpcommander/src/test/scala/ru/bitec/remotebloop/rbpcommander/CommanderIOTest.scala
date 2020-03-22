@@ -25,4 +25,8 @@ class CommanderIOTest extends org.scalatest.FunSuite {
     val dir = new File("workspace/save")
     println(dir.toPath.toUri.getPath)
   }
+  test("keyByPath"){
+    val k1 = CommanderIO.keyByPath(Paths.get("workspace/save/"))
+    assert(k1=="workspace/save")
+  }
 }

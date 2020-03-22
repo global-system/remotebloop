@@ -147,7 +147,7 @@ object ProjectTasks {
                 remoteAnalysisContents.getMiniSetup.output().getSingleOutput match {
                   case o if o.isPresent =>
                     val toPath =localProject.project.out.resolve(
-                      o.get().toString.replace('\\','/').stripPrefix("ord_root_out./")
+                      CommanderIO.keyByPath(o.get().toPath).stripPrefix("ord_root_out./")
                     );
                     Files.createDirectories(toPath)
                     FileSyncTasks.sync(rootFromPath.resolve("classes"), toPath).tryFlatMap{targetFiles =>

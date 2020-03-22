@@ -38,6 +38,7 @@ object ConfigProject {
   def loadRemoteAnalysis(project: Project, fileFromPath: Path): Option[AnalysisContents] = {
     if (Files.exists(fileFromPath)){
       val out = project.out
+      Files.createDirectories(out)
       val tempFile = out.resolve(s"tmpInAnalisys-${project.name}.zip")
       try{
         Files.copy(fileFromPath,tempFile,StandardCopyOption.REPLACE_EXISTING)

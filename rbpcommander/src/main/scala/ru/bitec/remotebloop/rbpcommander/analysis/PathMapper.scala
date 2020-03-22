@@ -12,12 +12,12 @@ import scala.collection.mutable.ArrayBuffer
 
 case class RootDir(key:String, path: Path){
   //for optimization
-  val pathString = if (CommanderIO.isFileSystemCaseSensitive) path.toString else path.toString.toLowerCase()
+  val pathKey = CommanderIO.keyByPath(path)
 }
 
 case class RootDirMaps(rootDirs:List[RootDir]){
   val mapByKey: Map[String,RootDir] =  rootDirs.map{d => d.key-> d}.toMap
-  val mapByPath: Map[String,RootDir] = rootDirs.map{d => d.pathString-> d}.toMap
+  val mapByPath: Map[String,RootDir] = rootDirs.map{d => d.pathKey-> d}.toMap
   val pathArray:Array[String] = mapByPath.keys.toArray.sortBy(-_.length)
 
   for(rd<-rootDirs if rd.key.contains('.')){
@@ -27,12 +27,10 @@ case class RootDirMaps(rootDirs:List[RootDir]){
   def relativizeByPath(path:Path): Option[RootDir] ={
     var curRootDir: String = null
     var i =0
-    val unSavePathString = path.toAbsolutePath.toString
-    //for optimization
-    val pathString = if (CommanderIO.isFileSystemCaseSensitive) unSavePathString else unSavePathString.toLowerCase()
+    val pathKey = CommanderIO.keyByPath(path.toAbsolutePath)
     val size = pathArray.length
     while(i<size && curRootDir == null){
-      if (pathString.startsWith(pathArray(i))){
+      if (pathKey.startsWith(pathArray(i))){
         //the first match is correct because array is sorted by length.
         curRootDir = pathArray(i)
       }
@@ -47,8 +45,8 @@ case class RootDirMaps(rootDirs:List[RootDir]){
   def toPortableFile(file: File): Option[File] = {
     val sourceFile = file
     relativizeByPath(file.toPath).flatMap{ rootDir =>
-      val sourceString = sourceFile.toString
-      val postfix = sourceString.substring(rootDir.pathString.length)
+      val sourceString = CommanderIO.keyByPath(sourceFile.toPath)
+      val postfix = sourceString.substring(rootDir.pathKey.length)
       val file = new File(s"${rootDir.key}./$postfix")
       Some(file)
     }
@@ -58,18 +56,16 @@ case class RootDirMaps(rootDirs:List[RootDir]){
 case class RootFile(key:String, path: Path)
 case class RootFileMaps(rootFiles:List[RootFile]){
   val mapByKey: Map[String,RootFile]= rootFiles.map{d => d.key-> d}.toMap
-  val mapByPath: Map[String,RootFile]=  rootFiles.map{d => d.path.toString-> d}.toMap
+  val mapByPath: Map[String,RootFile]=  rootFiles.map{d => CommanderIO.keyByPath(d.path)-> d}.toMap
   def toPortableFile(file: File): Option[File] = {
-    mapByPath.get(file.toString).flatMap{ rootFile =>
+    mapByPath.get(CommanderIO.keyByPath(file.toPath)).flatMap{ rootFile =>
       val file = new File(rootFile.key)
       Some(file)
     }
   }
 }
 
-case class PathMapper(fileSystem: FileSystem, inRootDirMaps: RootDirMaps, outRootDirMaps: RootDirMaps, rootFileMaps: RootFileMaps){
-  val sep = fileSystem.getSeparator
-  val oldSep = if (sep.eq("/")) "\\" else "/"
+case class PathMapper(inRootDirMaps: RootDirMaps, outRootDirMaps: RootDirMaps, rootFileMaps: RootFileMaps){
   def fromPortableFile(file:File):File = {
     def split(string: String): (String,String) = {
 
@@ -79,10 +75,9 @@ case class PathMapper(fileSystem: FileSystem, inRootDirMaps: RootDirMaps, outRoo
       }
       val s1 = string.substring(0,i)
       val s2 = string.substring(i+1)
-      //Path can transparently change slash so we cannot guarantee  single character
-      (s1,s2.replace(oldSep,sep))
+      (s1,s2)
     }
-    val fileString = file.toString
+    val fileString = CommanderIO.keyByPath(file.toPath)
     val i1 = fileString.indexOf('_')
     if (i1<0){
       throw new RuntimeException("There is an error in portable path format")
@@ -91,10 +86,10 @@ case class PathMapper(fileSystem: FileSystem, inRootDirMaps: RootDirMaps, outRoo
     val result = tp match {
       case "ird" =>
         val t2 = split(fileString)
-        inRootDirMaps.mapByKey(t2._1).path.resolve(t2._2.stripPrefix(sep))
+        inRootDirMaps.mapByKey(t2._1).path.resolve(t2._2.stripPrefix("/"))
       case "ord" =>
         val t2 = split(fileString)
-        outRootDirMaps.mapByKey(t2._1).path.resolve(t2._2.stripPrefix(sep))
+        outRootDirMaps.mapByKey(t2._1).path.resolve(t2._2.stripPrefix("/"))
       case "rf"  =>
         rootFileMaps.mapByKey(fileString).path
     }
@@ -147,7 +142,6 @@ object PathMapper{
   }
 
   def fromConfigProject(configProject: Project): PathMapper = {
-    val fs = configProject.directory.getFileSystem
-    PathMapper(fs,getInRootDirs(configProject),getOutRootDirs(configProject),getRootFiles(configProject))
+    PathMapper(getInRootDirs(configProject),getOutRootDirs(configProject),getRootFiles(configProject))
   }
 }

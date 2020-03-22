@@ -35,14 +35,14 @@ class ScanFileVisitor(val rootPath: Path) extends SimpleFileVisitor[Path]{
   private val dirListBuffer = ArrayBuffer.empty[DirPath]
   private val fileListBuffer = ArrayBuffer.empty[FilePath]
   override def preVisitDirectory(dir: Path, attrs: BasicFileAttributes): FileVisitResult = {
-    val key = rootPath.relativize(dir).toString.replace('\\','/').stripSuffix("/")
+    val key = CommanderIO.keyByPath(rootPath.relativize(dir))
     dirListBuffer.append(DirPath(key,dir,level))
     level = level +1;
     super.preVisitDirectory(dir, attrs)
   }
 
   override def visitFile(file: Path, attrs: BasicFileAttributes): FileVisitResult = {
-    val key = rootPath.relativize(file).toString.replace('\\','/')
+    val key = CommanderIO.keyByPath(rootPath.relativize(file))
     fileListBuffer.append(FilePath(key,file,level,attrs.lastModifiedTime().toMillis,""))
     super.visitFile(file, attrs)
   }
