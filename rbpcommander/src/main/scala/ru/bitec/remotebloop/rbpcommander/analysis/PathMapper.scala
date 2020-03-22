@@ -4,7 +4,7 @@ import java.io.File
 import java.nio.file.{FileSystem, Path, Paths}
 
 import bloop.config.Config.{JvmConfig, Project}
-import ru.bitec.remotebloop.rbpcommander.CommanderIO
+import ru.bitec.remotebloop.rbpcommander.{CommanderIO, FilePath}
 import xsbti.compile.analysis.Stamp
 
 import scala.collection.mutable.ArrayBuffer
@@ -65,11 +65,6 @@ case class RootFileMaps(rootFiles:List[RootFile]){
       Some(file)
     }
   }
-}
-case class FileMeta(path: Path, lastModified: Option[Stamp] = None, hash: Option[Stamp]= None)
-
-class FileMetaMaps(fileMetas: List[FileMeta]){
-  val mapByPath: Map[String,FileMeta]=  fileMetas.map{d => d.path.toString-> d}.toMap
 }
 
 case class PathMapper(fileSystem: FileSystem, inRootDirMaps: RootDirMaps, outRootDirMaps: RootDirMaps, rootFileMaps: RootFileMaps){

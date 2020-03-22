@@ -71,11 +71,11 @@ object ProjectTasks {
     1
   }
 
-  def restoreLocalProjectAnalysis(localProject: LocalProject, targetFile: Path): Task[Try[Int]] = TryTask {
+  def restoreLocalProjectAnalysis(localProject: LocalProject, targetFile: Path,metaCacheFiles: List[FilePath]): Task[Try[Int]] = TryTask {
     val mapper = PathMapper.fromConfigProject(localProject.project)
     val ac = localProject.remoteAnalysisContentsOpt.get
     ConfigProject.restoreLocalAnalysisFromPortable(
-      localProject.project, targetFile, ac, mapper
+      localProject.project, targetFile, ac, mapper,metaCacheFiles
     )
     1
   }
@@ -85,7 +85,7 @@ object ProjectTasks {
       localProject.analysisContentsOpt match {
         case Some(analysisContents) =>
           TryTask {
-            val urlString = ("jar:file:/" + localProject.remoteCacheOpt.get).replace('\\', '/')
+            val urlString = ("jar:file:" + localProject.remoteCacheOpt.get.toUri.getPath)
             val fs = FileSystems.newFileSystem(URI.create(urlString), new util.HashMap[String, AnyRef])
             val rootPath = fs.getRootDirectories.iterator().next()
             val classesPath = rootPath.resolve("classes")
@@ -153,14 +153,15 @@ object ProjectTasks {
                       o.get().toString.replace('\\','/').stripPrefix("ord_root_out./")
                     );
                     Files.createDirectories(toPath)
-                    FileSyncTasks.sync(rootFromPath.resolve("classes"), toPath)
+                    FileSyncTasks.sync(rootFromPath.resolve("classes"), toPath).tryFlatMap{targetFiles =>
+                      restoreLocalProjectAnalysis(localProject, analysisFile,targetFiles).tryMap{_ =>
+                        localProject
+                      }
+                    }
                   case _ =>
                     Task.now(Failure(new RuntimeException("Single output is not found.")))
                 }
-             val copyAnalysisTask = restoreLocalProjectAnalysis(localProject, analysisFile)
-             Task.gather(copyFileTask :: copyAnalysisTask :: Nil).groupByTry().tryMap { _ =>
-               localProject
-             }
+                copyFileTask
             case _ =>
               TryTask.now(localProject)
           }

@@ -2,11 +2,12 @@ package ru.bitec.remotebloop.rbpcommander.analysis
 
 import java.io.File
 
+import ru.bitec.remotebloop.rbpcommander.{CommanderIO, MetaCache}
 import xsbti.compile.MiniSetup
 import xsbti.compile.analysis.{Stamp, WriteMapper}
 
 
-class RestoreWriteMapper(pathMapper:PathMapper) extends WriteMapper{
+class RestoreWriteMapper(pathMapper:PathMapper,metaCache: MetaCache) extends WriteMapper{
   override def mapSourceFile(sourceFile: File): File = {
     pathMapper.fromPortableFile(sourceFile)
   }
@@ -38,7 +39,7 @@ class RestoreWriteMapper(pathMapper:PathMapper) extends WriteMapper{
   }
 
   override def mapBinaryStamp(file: File, binaryStamp: Stamp): Stamp = {
-    binaryStamp
+    CommanderIO.emptyStamp()
   }
 
   override def mapSourceStamp(file: File, sourceStamp: Stamp): Stamp = {
@@ -46,7 +47,13 @@ class RestoreWriteMapper(pathMapper:PathMapper) extends WriteMapper{
   }
 
   override def mapProductStamp(file: File, productStamp: Stamp): Stamp = {
-    productStamp
+    val sourceFile=pathMapper.fromPortableFile(file)
+    metaCache.mapByPath.get(sourceFile.toPath) match {
+      case Some(metaFile) =>
+        CommanderIO.lastModifiedFromLong(metaFile.lastModified)
+      case None =>
+        CommanderIO.lastModifiedFromPath(sourceFile.toPath)
+    }
   }
 
   override def mapMiniSetup(miniSetup: MiniSetup): MiniSetup = {

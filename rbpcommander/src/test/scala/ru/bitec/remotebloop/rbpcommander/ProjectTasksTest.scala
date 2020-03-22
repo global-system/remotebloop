@@ -18,7 +18,7 @@ class ProjectTasksTest extends org.scalatest.FunSuite {
   test("saveLocalProject",ManualTag){
     val f = ProjectTasks.loadLocalProjects(bloopConfigDir).runToFuture
     val result = Await.result(f,10.seconds)
-    val project = result.get.filter{p=> p.project.name.equals("rbpcommander")}.head
+    val project = result.get.filter{p=> p.project.name.equals("rbpcommander-test")}.head
     val st = ProjectTasks.saveLocalProject(project,workSpaceDir)
     val stResult = Await.result(st.runToFuture,1.hours)
     stResult match {
@@ -31,7 +31,7 @@ class ProjectTasksTest extends org.scalatest.FunSuite {
   test("restoreLocalProject",ManualTag){
     val f = ProjectTasks.loadLocalProjects(bloopConfigDir ).runToFuture
     val result = Await.result(f,10.seconds)
-    val project = result.get.filter{p=> p.project.name.equals("rbpcommander")}.head
+    val project = result.get.filter{p=> p.project.name.equals("rbpcommander-test")}.head
     val st = ProjectTasks.restoreLocalProject(project,workSpaceDir)
     val stResult = Await.result(st.runToFuture,1.hours)
     stResult match {

@@ -19,11 +19,15 @@ trait ScanPath{
 case class DirPath(key: String,path: Path,level: Int) extends ScanPath
 case class FilePath(key: String,path: Path,level: Int,lastModified: Long,hash:String) extends ScanPath
 case class ScanFiles(root:Path, dirs: Map[String,DirPath],files: Map[String,FilePath])
+case class MetaCache(metaCacheFiles: List[FilePath]){
+  val mapByPath:Map[Path,FilePath] = metaCacheFiles.map(f => f.path -> f).toMap
+}
 case class SyncAction(
-                       needDeleteFiles: List[FilePath],
-                       needDeleteDirs: List[DirPath],
-                       needReplaceFiles: List[FilePath],
-                       needCreateDir: List[DirPath]
+                       needDeleteTargetFiles: List[FilePath],
+                       needDeleteTargetDirs: List[DirPath],
+                       needIgnoreTargetFiles: List[FilePath],
+                       needReplaceSourceFiles: List[FilePath],
+                       needCreateSourceDirs: List[DirPath]
                      )
 
 class ScanFileVisitor(val rootPath: Path) extends SimpleFileVisitor[Path]{
@@ -68,87 +72,86 @@ object FileSyncTasks {
     //println(s"scan ${sourcePath.getFileSystem},$sourcePath \r\n in $end nanos")
     result
   }
-  def syncScanFiles(source: ScanFiles,target: ScanFiles,isIncremental: Boolean=false): Task[Try[Int]] = TryTask{
-    val needDeleteFiles = ArrayBuffer.empty[FilePath]
+  def syncScanFiles(source: ScanFiles,target: ScanFiles,isIncremental: Boolean=false): Task[Try[List[FilePath]]] = TryTask{
+    val needDeleteTargetFiles = ArrayBuffer.empty[FilePath]
     target.files.foreach{case (key,file) =>
       if (!source.files.isDefinedAt(key)) {
-        needDeleteFiles.append(file)
+        needDeleteTargetFiles.append(file)
       }
     }
-    val needDeleteDirs = ArrayBuffer.empty[DirPath]
+    val needDeleteTargetDirs = ArrayBuffer.empty[DirPath]
     target.dirs.foreach{case (key,dir) =>
       if (!source.dirs.isDefinedAt(key)) {
-        needDeleteDirs.append(dir)
+        needDeleteTargetDirs.append(dir)
       }
     }
-    val needReplaceFiles = ArrayBuffer.empty[FilePath]
-    source.files.foreach{case (fromKey,fromFile) =>
-      target.files.get(fromKey) match {
-        case Some(toFile) if isIncremental && toFile.hash == fromFile.hash =>
+    val needReplaceSourceFiles = ArrayBuffer.empty[FilePath]
+    val needIgnoreTargetFiles = ArrayBuffer.empty[FilePath]
+    source.files.foreach{case (targetKey,sourceFile) =>
+      target.files.get(targetKey) match {
+        case Some(targetFile) if isIncremental && targetFile.hash == sourceFile.hash =>
+          needIgnoreTargetFiles.append(targetFile)
         case _ =>
-          needReplaceFiles.append(fromFile)
+          needReplaceSourceFiles.append(sourceFile)
       }
     }
-    val needCreateDir = ArrayBuffer.empty[DirPath]
-    source.dirs.foreach{case (fromKey,fromDir) =>
-      target.dirs.get(fromKey) match {
+    val needCreateSourceDirs = ArrayBuffer.empty[DirPath]
+    source.dirs.foreach{case (sourceKey,sourceDir) =>
+      target.dirs.get(sourceKey) match {
         case Some(_)  =>
         case _ =>
-          needCreateDir.append(fromDir)
+          needCreateSourceDirs.append(sourceDir)
       }
     }
     SyncAction(
-      needDeleteFiles.toList,
-      needDeleteDirs.toList,
-      needReplaceFiles.toList,
-      needCreateDir.toList
+      needDeleteTargetFiles = needDeleteTargetFiles.toList,
+      needDeleteTargetDirs= needDeleteTargetDirs.toList,
+      needIgnoreTargetFiles = needIgnoreTargetFiles.toList,
+      needReplaceSourceFiles = needReplaceSourceFiles.toList,
+      needCreateSourceDirs = needCreateSourceDirs.toList
     )
   }.tryFlatMap{syncAction =>
     val sep = target.root.getFileSystem.getSeparator
-    val deleteFilesTask = TryTask{
-      var count = 0
-      syncAction.needDeleteFiles.foreach{file =>
-        Files.delete(file.path)
-        count=count+1
+    val deleteTargetFilesTask = TryTask{
+      syncAction.needDeleteTargetFiles.foreach{ targetFile =>
+        Files.delete(targetFile.path)
       }
-      count
+      Nil
     }
-    val replaceFilesTaks = TryTask{
-      var count = 0
-      syncAction.needReplaceFiles.foreach{file =>
-        val pathTo = target.root.resolve(file.keyToPathString(sep))
-        val pathFrom = file.path
-        Files.copy(pathFrom,pathTo,StandardCopyOption.REPLACE_EXISTING,StandardCopyOption.COPY_ATTRIBUTES)
-        count=count+1
+    val replaceTargetFilesTask = TryTask{
+      val buffer = ArrayBuffer.empty[FilePath]
+      syncAction.needReplaceSourceFiles.foreach{ targetFile =>
+        val targetPath = target.root.resolve(targetFile.keyToPathString(sep))
+        val sourcePath = targetFile.path
+        Files.copy(sourcePath,targetPath,StandardCopyOption.REPLACE_EXISTING)
+        buffer.append(
+          targetFile.copy(path=targetPath,lastModified = Files.getLastModifiedTime(targetPath).toMillis)
+        )
       }
-      count
+      buffer ++ syncAction.needIgnoreTargetFiles
     }
-    val deleteDirTask = TryTask{
-      var count = 0
-      syncAction.needDeleteDirs.sortBy(-_.level).foreach{dir =>
-        val dirPath = target.root.resolve(dir.keyToPathString(sep))
+    val deleteTargetDirTask = TryTask{
+      syncAction.needDeleteTargetDirs.sortBy(-_.level).foreach{ targetDir =>
+        val dirPath = target.root.resolve(targetDir.keyToPathString(sep))
         Files.delete(dirPath)
-        count=count+1
       }
-      count
+      Nil
     }
-    val createDirTask = TryTask{
-      var count = 0
-      syncAction.needCreateDir.sortBy(_.level).foreach{dir =>
+    val createTargetDirTask = TryTask{
+      syncAction.needCreateSourceDirs.sortBy(_.level).foreach{ dir =>
         val dirPath = target.root.resolve(dir.keyToPathString(sep))
         Files.createDirectory(dirPath)
-        count=count+1
       }
-      count
+      Nil
     }
-    val drFilesTask = Task.gather(deleteFilesTask::replaceFilesTaks::Nil).groupByTry().tryMap{ list =>
-      list.sum
+    val drTargetFilesTask = Task.gather(deleteTargetFilesTask::replaceTargetFilesTask::Nil).groupByTry().tryMap{ list =>
+      list.flatten
     }
-    Task.sequence(createDirTask::drFilesTask::deleteDirTask::Nil).groupByTry().tryMap{list =>
-      list.sum
+    Task.sequence(createTargetDirTask::drTargetFilesTask::deleteTargetDirTask::Nil).groupByTry().tryMap{list =>
+      list.flatten
     }
   }
-  def sync(sourceDir: Path, targetDir: Path): Task[Try[Int]] = {
+  def sync(sourceDir: Path, targetDir: Path): Task[Try[List[FilePath]]] = {
     val sourceScanTask = scanPath(sourceDir)
     val targeScanTask = scanPath(targetDir)
     Task.parZip2(sourceScanTask,targeScanTask).flatMap{

@@ -3,6 +3,7 @@ package ru.bitec.remotebloop.rbpcommander.analysis
 import java.nio.file.{Files, Path, StandardCopyOption}
 
 import bloop.config.Config.Project
+import ru.bitec.remotebloop.rbpcommander.{FilePath, MetaCache}
 import sbt.internal.inc.{Analysis, FileAnalysisStore}
 import xsbti.compile.AnalysisContents
 import xsbti.compile.analysis.{ReadMapper, ReadWriteMappers, WriteMapper}
@@ -77,10 +78,11 @@ object ConfigProject {
   def restoreLocalAnalysisFromPortable(project: Project,
                                        fileToPath: Path,
                                        analysisContents: AnalysisContents,
-                                       pathMapper: PathMapper
+                                       pathMapper: PathMapper,
+                                       metaCacheFiles: List[FilePath]
                                       ): Unit = {
     val readMapper = ReadMapper.getEmptyMapper
-    val writeMapper = new RestoreWriteMapper(pathMapper)
+    val writeMapper = new RestoreWriteMapper(pathMapper,MetaCache(metaCacheFiles))
     val mappers = new ReadWriteMappers(readMapper, writeMapper)
     val currentAnalysis = analysisContents.getAnalysis.asInstanceOf[Analysis]
     val currentSetup = analysisContents.getMiniSetup

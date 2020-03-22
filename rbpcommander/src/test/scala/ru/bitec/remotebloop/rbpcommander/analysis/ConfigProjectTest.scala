@@ -26,7 +26,7 @@ class ConfigProjectTest extends org.scalatest.FunSuite {
     val ac = ConfigProject.loadRemoteAnalysis(project,pathFrom)
     val mapper = PathMapper.fromConfigProject(project)
     ConfigProject.restoreLocalAnalysisFromPortable(
-      project, pathTo, ac.get, mapper
+      project, pathTo, ac.get, mapper,Nil
     )
     TestAnalysis.traceReadAnalysis(pathTo)
   }

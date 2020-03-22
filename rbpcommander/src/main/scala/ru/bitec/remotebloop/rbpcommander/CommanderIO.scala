@@ -33,4 +33,5 @@ object CommanderIO {
     val jv = Json.parse(Files.readAllBytes(Paths.get("config/shareddirs.json")))
     jv.as[JsObject].value.toList.map(v => v._1 -> Paths.get(v._2.as[String]))
   }
+
 }
