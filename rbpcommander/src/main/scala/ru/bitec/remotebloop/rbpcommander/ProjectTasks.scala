@@ -49,10 +49,7 @@ object ProjectTasks {
     }
     if (!fileTo.exists()) {
       Files.createDirectories(targetDir)
-      for (
-        fos <- Using(new FileOutputStream(fileTo));
-        _ <- Using(new ZipOutputStream(fos))) {
-      }
+      sbt.io.IO.zip(Nil,fileTo)
     }
     val analysisOpt = ConfigProject.loadLocalAnalysis(localProject.project)
     localProject.copy(
@@ -129,7 +126,7 @@ object ProjectTasks {
       )
     }.tryFlatMap{ LocalProject =>
       TryTask {
-        val urlString = ("jar:file:/" + LocalProject.remoteCacheOpt.get).replace('\\', '/')
+        val urlString = ("jar:file:" + LocalProject.remoteCacheOpt.get.toUri.getPath)
         val fs = FileSystems.newFileSystem(URI.create(urlString), new util.HashMap[String, AnyRef])
         fs
       }.tryBracket { in =>

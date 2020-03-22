@@ -17,7 +17,7 @@ class FileSyncTasksTest extends org.scalatest.FunSuite {
     assert(result.isSuccess)
   }
   test("scanZipPath"){
-    val urlString = ("jar:file:/" + Paths.get("workspace/commons-daemon.zip").toAbsolutePath).replace('\\','/')
+    val urlString = ("jar:file:" + Paths.get("workspace/commons-daemon.zip").toAbsolutePath.toUri.getPath)
     val fs = FileSystems.newFileSystem(URI.create(urlString), new util.HashMap[String, AnyRef])
     try{
       val task = FileSyncTasks.scanPath(fs.getRootDirectories.iterator().next())
@@ -28,7 +28,9 @@ class FileSyncTasksTest extends org.scalatest.FunSuite {
     }
   }
   test("syncZipPath",ManualTag){
-    val urlString = ("jar:file:/" + Paths.get("workspace/test.zip").toAbsolutePath).replace('\\','/')
+    val file = Paths.get("workspace/test.zip").toAbsolutePath
+    sbt.io.IO.zip(Nil,file.toFile)
+    val urlString = ("jar:file:" + file.toUri.getPath)
     val fs = FileSystems.newFileSystem(URI.create(urlString), new util.HashMap[String, AnyRef])
     try{
       val task = FileSyncTasks.sync(Paths.get("project"),fs.getRootDirectories.iterator().next())
