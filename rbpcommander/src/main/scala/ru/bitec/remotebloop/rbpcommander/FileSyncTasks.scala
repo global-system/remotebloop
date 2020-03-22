@@ -17,7 +17,7 @@ trait ScanPath{
 }
 
 case class DirPath(key: String,path: Path,level: Int) extends ScanPath
-case class FilePath(key: String,path: Path,level: Int,hash:String) extends ScanPath
+case class FilePath(key: String,path: Path,level: Int,lastModified: Long,hash:String) extends ScanPath
 case class ScanFiles(root:Path, dirs: Map[String,DirPath],files: Map[String,FilePath])
 case class SyncAction(
                        needDeleteFiles: List[FilePath],
@@ -39,7 +39,7 @@ class ScanFileVisitor(val rootPath: Path) extends SimpleFileVisitor[Path]{
 
   override def visitFile(file: Path, attrs: BasicFileAttributes): FileVisitResult = {
     val key = rootPath.relativize(file).toString.replace('\\','/')
-    fileListBuffer.append(FilePath(key,file,level,""))
+    fileListBuffer.append(FilePath(key,file,level,attrs.lastModifiedTime().toMillis,""))
     super.visitFile(file, attrs)
   }
 
@@ -68,7 +68,7 @@ object FileSyncTasks {
     //println(s"scan ${sourcePath.getFileSystem},$sourcePath \r\n in $end nanos")
     result
   }
-  def syncScanFiles(source: ScanFiles,target: ScanFiles): Task[Try[Int]] = TryTask{
+  def syncScanFiles(source: ScanFiles,target: ScanFiles,isIncremental: Boolean=false): Task[Try[Int]] = TryTask{
     val needDeleteFiles = ArrayBuffer.empty[FilePath]
     target.files.foreach{case (key,file) =>
       if (!source.files.isDefinedAt(key)) {
@@ -84,7 +84,7 @@ object FileSyncTasks {
     val needReplaceFiles = ArrayBuffer.empty[FilePath]
     source.files.foreach{case (fromKey,fromFile) =>
       target.files.get(fromKey) match {
-        case Some(toFile) if toFile.hash == fromFile.hash =>
+        case Some(toFile) if isIncremental && toFile.hash == fromFile.hash =>
         case _ =>
           needReplaceFiles.append(fromFile)
       }

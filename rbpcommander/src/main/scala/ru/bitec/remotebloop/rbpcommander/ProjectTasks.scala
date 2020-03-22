@@ -42,8 +42,11 @@ object ProjectTasks {
     }
   }
 
-  def saveLocalProjectPrepare(localProject: LocalProject, targetDir: Path): Task[Try[LocalProject]] = TryTask {
+  def saveLocalProjectPrepare(localProject: LocalProject, targetDir: Path,isIncremental: Boolean=false): Task[Try[LocalProject]] = TryTask {
     val fileTo = targetDir.resolve(localProject.project.name + ".zip").toFile
+    if (!isIncremental&&fileTo.exists()){
+      fileTo.delete()
+    }
     if (!fileTo.exists()) {
       Files.createDirectories(targetDir)
       for (

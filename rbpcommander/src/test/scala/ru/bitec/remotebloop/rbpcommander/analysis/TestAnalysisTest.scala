@@ -6,7 +6,7 @@ import ru.bitec.remotebloop.rbpcommander.ManualTag
 
 class TestAnalysisTest extends org.scalatest.FunSuite {
 
-  test("read"){
+  test("read",ManualTag){
     val fromFile = Paths.get("rbpserver/target/streams/compile/bloopAnalysisOut/_global/streams/inc_compile_2.12.zip")
     TestAnalysis.traceReadAnalysis(fromFile)
   }

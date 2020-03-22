@@ -66,8 +66,8 @@ class TraceReadMapper extends ReadMapper {
 
   override  def mapProductStamp(file: File, productStamp: Stamp): Stamp = {
     println(s"mapProductStamp:$file,$productStamp")
-    //val s1 = IOHash.fromHex( IOHash.toHex(IOHash(file)))
-    //val s2 = IOHash(file)
+    //val s1 = productStamp
+    //val s2 = CommanderIO.lastModifiedFromLong(file.lastModified())
     productStamp
   }
 
