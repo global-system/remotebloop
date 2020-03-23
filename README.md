@@ -18,12 +18,24 @@ The project does not aim to create infrastructure to manage jars with remote cac
 This project allows to run bloop as a service in windows.
 ### RbpCommander 
 This project allows to save\restore a bloop state.
-## How to use 
 
+## Configuration
+The `config` folder contains files which allows to configure projects
+### sethome 
+It configures paths: 
+ - java home 
+ - python home
+### shareddirs.json
+It configures shared directories which can be used to remap paths in save\restore a bloop state. 
+The mapper try to use `project.resolution` (see https://scalacenter.github.io/bloop/docs/configuration-format ),
+if it cannot be use it will use `shareddirs`
+
+## How to use 
 ### Installation
 - Download or clone project 
 - Run sbt universal:packageBin 
 - Unpack `target\universal\remotebloop-*.*.*-SNAPSHOT.zip` to some folder
+- configure paths in `remotebloop-*.*.*-SNAPSHOT\config`
 - Run `remotebloop-*.*.*-SNAPSHOT\bin\install.cmd`
   >It creates `remotebloop-*.*.*-SNAPSHOT\workspase` which contains bloop server. 
 - Run `remotebloop-*.*.*-SNAPSHOT\bin\addservice.cmd`
