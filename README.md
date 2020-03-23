@@ -28,7 +28,7 @@ It configures paths:
 ### shareddirs.json
 It configures shared directories which can be used to remap paths in save\restore a bloop state. 
 The mapper try to use `project.resolution` (see https://scalacenter.github.io/bloop/docs/configuration-format ),
-if it cannot be use it will use `shareddirs`
+if it cannot be used the mapper will use `shareddirs`.
 
 ## How to use 
 ### Installation
