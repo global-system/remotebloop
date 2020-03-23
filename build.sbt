@@ -18,6 +18,14 @@ lazy val global = project
     mappings in Universal ++= {
       val files = (externalDependencyClasspath in Runtime in rbpserver).value
       files.map{f => f.data -> ("lib/rbpserver/"+f.data.name)}
+    },
+    mappings in Universal += {
+      val jar = (packageBin in Compile in rbpcommander).value
+      jar -> ("lib/rbpcommander/" + jar.getName)
+    },
+    mappings in Universal ++= {
+      val files = (externalDependencyClasspath in Runtime in rbpcommander).value
+      files.map{f => f.data -> ("lib/rbpcommander/"+f.data.name)}
     }/*,
     mappings in Universal ++= {
       val files = (externalDependencyClasspath in Runtime in rbplauncher).value

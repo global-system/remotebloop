@@ -4,7 +4,7 @@ import com.beust.jcommander.Parameter;
 import com.beust.jcommander.Parameters;
 
 public class RbpCommanderArgs {
-    @Parameter(names = "help"
+    @Parameter(names = "--help"
             ,description = "Prints the usage"
             , help = true
     )

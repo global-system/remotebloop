@@ -21,5 +21,5 @@ For /R ..\lib\rbpserver %%i IN (*.jar) do set classpath=!classpath!%%i;
   --StartParams="" ^
   --StopMode="java" ^
   --StopClass="ru.bitec.remotebloop.rbpserver.RbpHtmlServer" ^
-  --StopParams="stop"
+  --StopParams="--stop"
  

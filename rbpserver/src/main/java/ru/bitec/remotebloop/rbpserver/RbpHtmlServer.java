@@ -27,7 +27,7 @@ public class RbpHtmlServer {
         private Integer port = 0;
         @Parameter(names = "--help", help = true)
         private boolean help;
-        @Parameter(names = "stop", description = "stop server")
+        @Parameter(names = "--stop", description = "stops server")
         private boolean stop=false;
     }
     public static final Path fileLockPath = Paths.get("workspace/.rbpserver/lock/port.txt");

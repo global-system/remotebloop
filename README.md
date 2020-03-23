@@ -7,11 +7,17 @@ See also: https://github.com/scalacenter/bloop/issues/1091
 ## Project goals
 - run bloop as a service in windows 
 - start\stop a bloop server by http api
-- create a jar with remote cache 
-- restore bloop state by the jar with remote cache
+- save a bloop state to zip
+- restore bloop state by the zip with remote cache
 
-The project does not aim to create infrastructure to manage jars with remote cache
+The project does not aim to create infrastructure to manage jars with remote cache.
 
+## Subprojects
+
+### RbpServer
+This project allows to run bloop as a service in windows.
+### RbpCommander 
+This project allows to save\restore a bloop state.
 ## How to use 
 
 ### Installation
@@ -27,5 +33,34 @@ The project does not aim to create infrastructure to manage jars with remote cac
 - Start BloopService
 - Add `remotebloop-*.*.*-SNAPSHOT\workspace\.bloop` to the path variable
 
+### Preparing to use blpcommander 
+- Add `remotebloop-*.*.*-SNAPSHOT\bin\share` to the path variable
 
+### Usage of blpcommander
+ - set current directory to the folder where `.bloop` is located
+ - execute blpcommander command 
+   > ```
+   > Options:
+   >   --help
+   >     Prints the usage
+   > Commands:
+   >   save      Saves compilation state
+   >     Usage: save [options]
+   >       Options:
+   >       * --target-dir
+   >           File path to the directory where the state will be saved
+   >  
+   >   restore      Restores compilation state
+   >     Usage: restore [options]
+   >       Options:
+   >       * --source-dir
+   >           File path to the directory where the state will be restored from
+   > ```
+#### Attention 
+You should stop bloop server manually before blpcommander usage.
 
+## Roadmap
+ - make incremental save\restore
+ - automate synchronization bloop state with blpcommander
+ - fix bugs on usage 
+ - issue stable release

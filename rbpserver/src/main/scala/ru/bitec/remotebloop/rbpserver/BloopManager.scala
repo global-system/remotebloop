@@ -24,7 +24,7 @@ class BloopManager(processBuilder:ProcessBuilder,log: String => Unit){
         reader.close()
         inStream.close()
       }
-      val endMsg = "the bloop process is destroyed2"
+      val endMsg = "the bloop process is destroyed"
       log(endMsg)
       println(endMsg)
     })
