@@ -1,7 +1,7 @@
 # RemoteBloop
 A set of tools to make easier adding remote compilation to the bloop server
 ## Attention 
-The project is in experimental stage. 
+The project is frozen, see for details: https://github.com/scalacenter/bloop/issues/1351
 
 See also: https://github.com/scalacenter/bloop/issues/1091
 ## Project goals
